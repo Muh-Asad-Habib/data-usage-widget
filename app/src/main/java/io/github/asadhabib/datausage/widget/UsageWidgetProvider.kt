@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import io.github.asadhabib.datausage.data.WifiLog
 
 class Widget2x1 : UsageWidgetProvider()
 class Widget2x2 : UsageWidgetProvider()
@@ -25,7 +26,20 @@ open class UsageWidgetProvider : AppWidgetProvider() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action == WidgetRenderer.ACTION_REFRESH) {
             val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-            updateAsync(ctx, if (id == AppWidgetManager.INVALID_APPWIDGET_ID) WidgetUpdater.ids(ctx) else intArrayOf(id))
+            val ids = if (id == AppWidgetManager.INVALID_APPWIDGET_ID) WidgetUpdater.ids(ctx) else intArrayOf(id)
+            val mgr = AppWidgetManager.getInstance(ctx)
+            ids.forEach { mgr.partiallyUpdateAppWidget(it, WidgetRenderer.busy(ctx)) }
+            val started = System.currentTimeMillis()
+            val pending = goAsync()
+            Thread {
+                try {
+                    WifiLog.record(ctx)
+                    // Keep the spinner visible briefly so the tap feels acknowledged.
+                    val wait = 600 - (System.currentTimeMillis() - started)
+                    if (wait > 0) Thread.sleep(wait)
+                    ids.forEach { WidgetUpdater.update(ctx, it) }
+                } finally { pending.finish() }
+            }.start()
         } else super.onReceive(ctx, intent)
     }
 

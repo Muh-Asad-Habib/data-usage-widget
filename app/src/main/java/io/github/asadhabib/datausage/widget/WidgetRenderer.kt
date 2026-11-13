@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -14,6 +15,7 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
+import android.os.Build
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
@@ -64,8 +66,9 @@ object WidgetRenderer {
             else -> large(ctx, id, cfg, data, wDp, hDp, density)
         }
         val text = cfg.textColor
-        v.setInt(R.id.refresh_bg, "setColorFilter", (text and 0x00FFFFFF) or (0x1F shl 24))
+        v.setInt(R.id.refresh_bg, "setColorFilter", (text and 0x00FFFFFF) or (0x26 shl 24))
         v.setInt(R.id.refresh_icon, "setColorFilter", text)
+        if (Build.VERSION.SDK_INT >= 31) v.setColorStateList(R.id.refresh_progress, "setIndeterminateTintList", ColorStateList.valueOf(text))
         if (interactive) {
             val open = PendingIntent.getActivity(
                 ctx, id, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -82,6 +85,14 @@ object WidgetRenderer {
         }
         return v
     }
+
+    /** Partial update that swaps the refresh icon for a spinner while data reloads. */
+    fun busy(ctx: Context) = RemoteViews(ctx.packageName, R.layout.widget_usage).apply {
+        setViewVisibility(R.id.refresh_icon, View.INVISIBLE)
+        setViewVisibility(R.id.refresh_progress, View.VISIBLE)
+    }
+
+    private val clock = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
 
     /** Small sizes always show total, Wi-Fi and mobile data. */
     private fun compact(ctx: Context, id: Int, cfg: WidgetConfig, data: WidgetData, wDp: Int, hDp: Int, density: Float, layout: Int): RemoteViews {
@@ -161,7 +172,7 @@ object WidgetRenderer {
         val net = cfg.net
         val title = cfg.title.ifBlank {
             if (net == Net.ALL) data.periodText else "${net.label} · ${data.periodText}"
-        }
+        } + " · " + java.time.LocalTime.now().format(clock)
         v.setTextViewText(R.id.title, title)
         v.setTextColor(R.id.title, sub)
         v.setTextColor(R.id.total, text)
