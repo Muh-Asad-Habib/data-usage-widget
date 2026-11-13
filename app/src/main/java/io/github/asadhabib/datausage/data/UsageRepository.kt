@@ -4,6 +4,8 @@ import android.app.usage.NetworkStats
 import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.ConnectivityManager
+import android.os.Build
+import android.telephony.TelephonyManager
 import java.time.LocalDate
 
 class UsageRepository(context: Context) {
@@ -12,8 +14,17 @@ class UsageRepository(context: Context) {
 
     private val types = listOf(ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE)
 
+    // Android 9 and older need the SIM subscriber id for mobile stats; Android 10+ accepts null.
+    @Suppress("DEPRECATION", "MissingPermission")
+    private val subscriber: String? get() = run {
+        if (Build.VERSION.SDK_INT >= 29) null
+        else try { ctx.getSystemService(TelephonyManager::class.java)?.subscriberId } catch (_: Exception) { null }
+    }
+
+    private fun sub(type: Int) = if (type == ConnectivityManager.TYPE_MOBILE) subscriber else null
+
     fun device(type: Int, start: Long, end: Long): Traffic = try {
-        val b = nsm.querySummaryForDevice(type, null, start, end)
+        val b = nsm.querySummaryForDevice(type, sub(type), start, end)
         Traffic(b.rxBytes, b.txBytes)
     } catch (_: Exception) { Traffic() }
 
@@ -22,7 +33,7 @@ class UsageRepository(context: Context) {
         data class Acc(var wifi: Traffic = Traffic(), var mobile: Traffic = Traffic(), var fg: Traffic = Traffic(), var bg: Traffic = Traffic())
         val map = HashMap<Int, Acc>()
         for (type in types) {
-            val stats = try { nsm.querySummary(type, null, r.start, r.end) } catch (_: Exception) { null } ?: continue
+            val stats = try { nsm.querySummary(type, sub(type), r.start, r.end) } catch (_: Exception) { null } ?: continue
             val b = NetworkStats.Bucket()
             try {
                 while (stats.hasNextBucket()) {
@@ -65,7 +76,7 @@ class UsageRepository(context: Context) {
         val mobile = LongArray(days)
         for (type in types) {
             val stats = try {
-                nsm.queryDetailsForUid(type, null, starts.first(), starts.last(), uid)
+                nsm.queryDetailsForUid(type, sub(type), starts.first(), starts.last(), uid)
             } catch (_: Exception) { null } ?: continue
             val b = NetworkStats.Bucket()
             try {

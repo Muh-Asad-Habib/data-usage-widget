@@ -3,7 +3,7 @@ package io.github.asadhabib.datausage.widget
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
@@ -114,15 +114,17 @@ class WidgetConfigActivity : ComponentActivity() {
     }
 
     private fun saveImage(uri: Uri): Boolean = try {
-        val src = ImageDecoder.createSource(contentResolver, uri)
-        val bmp = ImageDecoder.decodeBitmap(src) { dec, info, _ ->
-            val m = max(info.size.width, info.size.height)
-            if (m > 1080) {
-                val s = 1080f / m
-                dec.setTargetSize((info.size.width * s).roundToInt(), (info.size.height * s).roundToInt())
-            }
-            dec.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-        }
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        var sample = 1
+        while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 1080) sample *= 2
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        val raw = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }!!
+        val m = max(raw.width, raw.height)
+        val bmp = if (m > 1080) {
+            val s = 1080f / m
+            Bitmap.createScaledBitmap(raw, (raw.width * s).roundToInt(), (raw.height * s).roundToInt(), true).also { if (it !== raw) raw.recycle() }
+        } else raw
         WidgetPrefs.imageFile(this, widgetId).outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it) }
         true
     } catch (_: Exception) { false }
