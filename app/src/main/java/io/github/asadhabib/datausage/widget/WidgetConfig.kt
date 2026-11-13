@@ -25,6 +25,9 @@ data class WidgetConfig(
     val dim: Int = 0,
     val radius: Int = 28,
     val textColor: Int = 0xFF15171A.toInt(),
+    val showBg: Boolean = true,
+    /** 0 = off, 1..3 = frosted glass strength. */
+    val blur: Int = 0,
 )
 
 object WidgetPrefs {
@@ -55,6 +58,8 @@ object WidgetPrefs {
             dim = p.getInt(k + "dim", d.dim),
             radius = p.getInt(k + "radius", d.radius),
             textColor = p.getInt(k + "text", d.textColor),
+            showBg = p.getBoolean(k + "showbg", d.showBg),
+            blur = p.getInt(k + "blur", d.blur),
         )
     }
 
@@ -78,6 +83,8 @@ object WidgetPrefs {
             .putInt(k + "dim", c.dim)
             .putInt(k + "radius", c.radius)
             .putInt(k + "text", c.textColor)
+            .putBoolean(k + "showbg", c.showBg)
+            .putInt(k + "blur", c.blur)
             .apply()
     }
 

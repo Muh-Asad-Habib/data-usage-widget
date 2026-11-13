@@ -67,8 +67,11 @@ object WidgetRenderer {
             else -> large(ctx, id, cfg, data, wDp, hDp, density)
         }
         val text = cfg.textColor
-        v.setInt(R.id.refresh_bg, "setColorFilter", (text and 0x00FFFFFF) or (0x26 shl 24))
-        v.setInt(R.id.refresh_icon, "setColorFilter", text)
+        // Draw the button ourselves: some launchers (One UI) drop RemoteViews colour filters,
+        // which left a solid white circle with an invisible white icon.
+        val (circle, icon) = refreshBitmaps(ctx, text, density)
+        v.setImageViewBitmap(R.id.refresh_bg, circle)
+        v.setImageViewBitmap(R.id.refresh_icon, icon)
         // Launchers reapply onto the existing view, so undo the busy state explicitly.
         v.setViewVisibility(R.id.refresh_icon, View.VISIBLE)
         v.setViewVisibility(R.id.refresh_progress, View.GONE)
@@ -229,6 +232,26 @@ object WidgetRenderer {
         return v
     }
 
+    private var refreshKey = 0L
+    private var refreshCache: Pair<Bitmap, Bitmap>? = null
+
+    @Synchronized
+    private fun refreshBitmaps(ctx: Context, text: Int, density: Float): Pair<Bitmap, Bitmap> {
+        val key = (text.toLong() shl 8) or (density * 10).toLong()
+        refreshCache?.let { if (key == refreshKey) return it }
+        val s = (30 * density).toInt()
+        val circle = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
+        Canvas(circle).drawCircle(s / 2f, s / 2f, s / 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = (text and 0x00FFFFFF) or (0x1F shl 24)
+        })
+        val i = (16 * density).toInt()
+        val icon = Bitmap.createBitmap(i, i, Bitmap.Config.ARGB_8888)
+        ctx.getDrawable(R.drawable.ic_refresh)!!.mutate().apply {
+            setTint(text); setBounds(0, 0, i, i); draw(Canvas(icon))
+        }
+        return (circle to icon).also { refreshCache = it; refreshKey = key }
+    }
+
     private var imgKey: String? = null
     private var imgCache: Bitmap? = null
 
@@ -249,11 +272,16 @@ object WidgetRenderer {
         val w = (wDp * density).toInt().coerceAtLeast(1)
         val h = (hDp * density).toInt().coerceAtLeast(1)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        if (!cfg.showBg) return bmp
         val c = Canvas(bmp)
         val rect = RectF(0f, 0f, w.toFloat(), h.toFloat())
         val r = cfg.radius * density
+        val blur = cfg.blur.coerceIn(0, 3)
         c.clipPath(Path().apply { addRoundRect(rect, r, r, Path.Direction.CW) })
-        c.saveLayerAlpha(rect, cfg.opacity.coerceIn(0, 100) * 255 / 100)
+        // Frosted glass: a launcher widget can't sample the wallpaper behind it, so blur
+        // raises the opacity a little and adds a soft sheen and hairline edge instead.
+        val op = cfg.opacity.coerceIn(0, 100).let { it + (100 - it) * blur * 15 / 100 }
+        c.saveLayerAlpha(rect, op * 255 / 100)
         val p = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         when (cfg.bgType) {
             BgType.SOLID -> { p.color = cfg.color1; c.drawRect(rect, p) }
@@ -270,12 +298,32 @@ object WidgetRenderer {
                     val scale = maxOf(w.toFloat() / img.width, h.toFloat() / img.height)
                     val sw = (w / scale).toInt(); val sh = (h / scale).toInt()
                     val sx = (img.width - sw) / 2; val sy = (img.height - sh) / 2
-                    c.drawBitmap(img, Rect(sx, sy, sx + sw, sy + sh), rect, p)
+                    val src = Rect(sx, sy, sx + sw, sy + sh)
+                    if (blur == 0) c.drawBitmap(img, src, rect, p) else {
+                        // Cheap blur: downscale hard, then upscale in two filtered steps.
+                        val f = intArrayOf(1, 10, 20, 36)[blur]
+                        val small = Bitmap.createBitmap((w / f).coerceAtLeast(1), (h / f).coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                        Canvas(small).drawBitmap(img, src, RectF(0f, 0f, small.width.toFloat(), small.height.toFloat()), p)
+                        val mid = Bitmap.createBitmap((w / 3).coerceAtLeast(1), (h / 3).coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                        Canvas(mid).drawBitmap(small, null, RectF(0f, 0f, mid.width.toFloat(), mid.height.toFloat()), p)
+                        c.drawBitmap(mid, null, rect, p)
+                        small.recycle(); mid.recycle()
+                    }
                 }
             }
         }
         if (cfg.dim > 0) c.drawColor(Color.argb(cfg.dim * 255 / 100, 0, 0, 0))
         c.restore()
+        if (blur > 0) {
+            p.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), Color.argb(14 * blur, 255, 255, 255), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            c.drawRect(rect, p)
+            p.shader = null
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = density
+            p.color = Color.argb(30 + 14 * blur, 255, 255, 255)
+            val e = density / 2
+            c.drawRoundRect(RectF(e, e, w - e, h - e), r - e, r - e, p)
+        }
         return bmp
     }
 
