@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -64,7 +66,9 @@ fun AppTheme(content: @Composable () -> Unit) {
         surfaceVariant = Color(0xFFEAEAEA), onSurface = Color(0xFF111111), onSurfaceVariant = Color(0xFF737373),
         secondaryContainer = Color(0xFFDDE9FF), outline = Color(0xFFE8E8E8), primaryContainer = Color(0xFFFCFCFC),
     )
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(colorScheme = scheme) {
+        CompositionLocalProvider(LocalContentColor provides scheme.onSurface, content = content)
+    }
 }
 
 @Composable
