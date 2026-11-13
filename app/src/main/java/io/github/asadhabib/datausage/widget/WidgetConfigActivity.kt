@@ -133,7 +133,7 @@ class WidgetConfigActivity : ComponentActivity() {
         var data by remember { mutableStateOf<WidgetData?>(null) }
         var imgVersion by remember { mutableIntStateOf(0) }
         val scope = rememberCoroutineScope()
-        val (wDp, hDp) = remember { WidgetUpdater.size(this, widgetId).let { (w, h) -> if (w < 150) 320 to 160 else w to h } }
+        val (wDp, hDp) = remember { WidgetUpdater.size(this, widgetId) }
 
         LaunchedEffect(cfg.period) {
             data = withContext(Dispatchers.IO) { WidgetData.load(this@WidgetConfigActivity, cfg) }

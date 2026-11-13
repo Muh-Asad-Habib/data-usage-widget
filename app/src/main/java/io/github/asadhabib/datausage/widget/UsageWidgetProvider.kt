@@ -7,7 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 
-class UsageWidgetProvider : AppWidgetProvider() {
+class Widget2x1 : UsageWidgetProvider()
+class Widget2x2 : UsageWidgetProvider()
+class Widget4x1 : UsageWidgetProvider()
+
+open class UsageWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) = updateAsync(ctx, ids)
 
@@ -34,13 +38,24 @@ class UsageWidgetProvider : AppWidgetProvider() {
 }
 
 object WidgetUpdater {
-    fun ids(ctx: Context): IntArray = AppWidgetManager.getInstance(ctx)
-        .getAppWidgetIds(ComponentName(ctx, UsageWidgetProvider::class.java))
+    private val providers = listOf(
+        UsageWidgetProvider::class.java, Widget2x1::class.java, Widget2x2::class.java, Widget4x1::class.java,
+    )
+
+    fun ids(ctx: Context): IntArray {
+        val mgr = AppWidgetManager.getInstance(ctx)
+        return providers.flatMap { mgr.getAppWidgetIds(ComponentName(ctx, it)).asList() }.toIntArray()
+    }
 
     fun size(ctx: Context, id: Int): Pair<Int, Int> {
-        val o = AppWidgetManager.getInstance(ctx).getAppWidgetOptions(id)
-        val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: 250
-        val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0).takeIf { it > 0 } ?: 110
+        val mgr = AppWidgetManager.getInstance(ctx)
+        val o = mgr.getAppWidgetOptions(id)
+        val info = mgr.getAppWidgetInfo(id)
+        val modern = android.os.Build.VERSION.SDK_INT >= 31
+        val cw = if (modern) info?.targetCellWidth?.takeIf { it > 0 } ?: 4 else 4
+        val ch = if (modern) info?.targetCellHeight?.takeIf { it > 0 } ?: 2 else 2
+        val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: (cw * 85)
+        val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0).takeIf { it > 0 } ?: (ch * 85)
         return w to h
     }
 

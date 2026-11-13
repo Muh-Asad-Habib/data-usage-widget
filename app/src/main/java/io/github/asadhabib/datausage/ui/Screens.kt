@@ -68,6 +68,9 @@ import io.github.asadhabib.datausage.data.Range
 import io.github.asadhabib.datausage.data.UsageAccess
 import io.github.asadhabib.datausage.data.UsageSummary
 import io.github.asadhabib.datausage.widget.UsageWidgetProvider
+import io.github.asadhabib.datausage.widget.Widget2x1
+import io.github.asadhabib.datausage.widget.Widget2x2
+import io.github.asadhabib.datausage.widget.Widget4x1
 import io.github.asadhabib.datausage.widget.WidgetConfigActivity
 import io.github.asadhabib.datausage.widget.WidgetUpdater
 import java.time.Instant
@@ -533,13 +536,29 @@ fun WidgetsScreen(vm: MainViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp,
                 )
                 Spacer(Modifier.height(14.dp))
-                Button(
-                    {
-                        if (mgr.isRequestPinAppWidgetSupported)
-                            mgr.requestPinAppWidget(ComponentName(ctx, UsageWidgetProvider::class.java), null, null)
-                    },
-                    Modifier.fillMaxWidth(),
-                ) { Text("Tambah ke layar utama") }
+                Text("Pilih ukuran", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Spacer(Modifier.height(6.dp))
+                val sizes = listOf(
+                    Triple("2x1", "Mini · total, Wi-Fi, seluler", Widget2x1::class.java),
+                    Triple("2x2", "Kotak · + bar rasio", Widget2x2::class.java),
+                    Triple("4x1", "Baris · total, Wi-Fi, seluler", Widget4x1::class.java),
+                    Triple("4x2", "Lengkap · + daftar aplikasi & donat", UsageWidgetProvider::class.java),
+                )
+                sizes.forEach { (size, desc, cls) ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable {
+                                if (mgr.isRequestPinAppWidgetSupported)
+                                    mgr.requestPinAppWidget(ComponentName(ctx, cls), null, null)
+                            }.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(size, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.width(44.dp))
+                        Text(desc, Modifier.weight(1f), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("+", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
             }
         }
         if (ids.isNotEmpty()) item { SectionTitle("Widget aktif") }

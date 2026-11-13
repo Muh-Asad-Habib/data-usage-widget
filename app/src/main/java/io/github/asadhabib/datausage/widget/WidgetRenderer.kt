@@ -53,9 +53,106 @@ object WidgetRenderer {
     private val names = intArrayOf(R.id.name1, R.id.name2, R.id.name3, R.id.name4, R.id.name5)
     private val vals = intArrayOf(R.id.val1, R.id.val2, R.id.val3, R.id.val4, R.id.val5)
 
+    const val WIFI_COLOR = 0xFF3D7BFF.toInt()
+    const val CELL_COLOR = 0xFF5BD37F.toInt()
+
     fun build(ctx: Context, id: Int, cfg: WidgetConfig, data: WidgetData, wDp: Int, hDp: Int, interactive: Boolean = true): RemoteViews {
-        val v = RemoteViews(ctx.packageName, R.layout.widget_usage)
         val density = min(ctx.resources.displayMetrics.density, 2.5f)
+        val v = when {
+            wDp < 200 -> compact(ctx, id, cfg, data, wDp, hDp, density, R.layout.widget_compact)
+            hDp < 110 -> compact(ctx, id, cfg, data, wDp, hDp, density, R.layout.widget_strip)
+            else -> large(ctx, id, cfg, data, wDp, hDp, density)
+        }
+        val text = cfg.textColor
+        v.setInt(R.id.refresh_bg, "setColorFilter", (text and 0x00FFFFFF) or (0x1F shl 24))
+        v.setInt(R.id.refresh_icon, "setColorFilter", text)
+        if (interactive) {
+            val open = PendingIntent.getActivity(
+                ctx, id, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            v.setOnClickPendingIntent(R.id.widget_root, open)
+            val refresh = PendingIntent.getBroadcast(
+                ctx, id,
+                Intent(ctx, UsageWidgetProvider::class.java).setAction(ACTION_REFRESH)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            v.setOnClickPendingIntent(R.id.refresh, refresh)
+        }
+        return v
+    }
+
+    /** Small sizes always show total, Wi-Fi and mobile data. */
+    private fun compact(ctx: Context, id: Int, cfg: WidgetConfig, data: WidgetData, wDp: Int, hDp: Int, density: Float, layout: Int): RemoteViews {
+        val v = RemoteViews(ctx.packageName, layout)
+        val strip = layout == R.layout.widget_strip
+        val text = cfg.textColor
+        val sub = (text and 0x00FFFFFF) or (0xB3 shl 24)
+        v.setImageViewBitmap(R.id.bg, background(ctx, id, cfg, wDp, hDp, density))
+
+        // Fit title, total and bar into the height left after the two Wi-Fi/mobile rows.
+        var avail = hDp - (if (strip) 16 else 60).toFloat()
+        val showTitle = avail >= (if (strip) 46 else 44)
+        if (showTitle) avail -= 16
+        val maxSp = when { strip -> 26f; wDp < 150 -> 22f; else -> 30f }
+        val big = (avail / 1.25f).coerceIn(16f, maxSp)
+        avail -= big * 1.25f
+        v.setViewVisibility(R.id.title, if (showTitle) View.VISIBLE else View.GONE)
+        v.setTextViewText(R.id.title, cfg.title.ifBlank { data.periodText })
+        v.setTextColor(R.id.title, sub)
+        v.setTextColor(R.id.total, text)
+        v.setTextViewTextSize(R.id.total, TypedValue.COMPLEX_UNIT_SP, big)
+        for (l in intArrayOf(R.id.wifi_label, R.id.cell_label)) v.setTextColor(l, sub)
+        for (l in intArrayOf(R.id.wifi_val, R.id.cell_val)) v.setTextColor(l, text)
+        v.setInt(R.id.wifi_icon, "setColorFilter", WIFI_COLOR)
+        v.setInt(R.id.cell_icon, "setColorFilter", CELL_COLOR)
+        val hideLabels = !strip && wDp < 130
+        v.setViewVisibility(R.id.wifi_label, if (hideLabels) View.INVISIBLE else View.VISIBLE)
+        v.setViewVisibility(R.id.cell_label, if (hideLabels) View.INVISIBLE else View.VISIBLE)
+
+        val s = data.summary
+        if (s == null) {
+            v.setTextViewText(R.id.total, "—")
+            v.setTextViewText(R.id.wifi_val, "Beri izin")
+            v.setTextViewText(R.id.cell_val, "di aplikasi")
+            if (!strip) v.setViewVisibility(R.id.bar, View.GONE)
+        } else {
+            v.setTextViewText(R.id.total, Fmt.bytes(s.all.total))
+            v.setTextViewText(R.id.wifi_val, Fmt.bytes(s.wifi.total))
+            v.setTextViewText(R.id.cell_val, Fmt.bytes(s.mobile.total))
+            if (!strip) {
+                if (avail >= 16) {
+                    val bw = ((wDp - 28) * density).toInt().coerceAtLeast(1)
+                    v.setImageViewBitmap(R.id.bar, ratioBar(bw, (6 * density).toInt(), s.wifi.total, s.mobile.total, text))
+                    v.setViewVisibility(R.id.bar, View.VISIBLE)
+                } else v.setViewVisibility(R.id.bar, View.GONE)
+            }
+        }
+        val refresh = cfg.showRefresh && (strip || showTitle)
+        v.setViewVisibility(R.id.refresh, if (refresh) View.VISIBLE else View.GONE)
+        return v
+    }
+
+    fun ratioBar(w: Int, h: Int, wifi: Long, cell: Long, textColor: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(w, h.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        val r = h / 2f
+        val all = RectF(0f, 0f, w.toFloat(), h.toFloat())
+        c.clipPath(Path().apply { addRoundRect(all, r, r, Path.Direction.CW) })
+        val sum = wifi + cell
+        if (sum <= 0) {
+            p.color = (textColor and 0x00FFFFFF) or (0x26 shl 24); c.drawRect(all, p); return bmp
+        }
+        val split = w * (wifi.toFloat() / sum)
+        p.color = WIFI_COLOR; c.drawRect(0f, 0f, split, h.toFloat(), p)
+        p.color = CELL_COLOR; c.drawRect(split, 0f, w.toFloat(), h.toFloat(), p)
+        return bmp
+    }
+
+    private fun large(ctx: Context, id: Int, cfg: WidgetConfig, data: WidgetData, wDp: Int, hDp: Int, density: Float): RemoteViews {
+        val v = RemoteViews(ctx.packageName, R.layout.widget_usage)
         val text = cfg.textColor
         val sub = (text and 0x00FFFFFF) or (0xB3 shl 24)
 
@@ -114,23 +211,6 @@ object WidgetRenderer {
         }
 
         v.setViewVisibility(R.id.refresh, if (cfg.showRefresh) View.VISIBLE else View.GONE)
-        v.setInt(R.id.refresh_bg, "setColorFilter", (text and 0x00FFFFFF) or (0x1F shl 24))
-        v.setInt(R.id.refresh_icon, "setColorFilter", text)
-
-        if (interactive) {
-            val open = PendingIntent.getActivity(
-                ctx, id, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-            v.setOnClickPendingIntent(R.id.widget_root, open)
-            val refresh = PendingIntent.getBroadcast(
-                ctx, id,
-                Intent(ctx, UsageWidgetProvider::class.java).setAction(ACTION_REFRESH)
-                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-            v.setOnClickPendingIntent(R.id.refresh, refresh)
-        }
         return v
     }
 
