@@ -11,7 +11,7 @@ A lightweight Android app and home-screen widget that shows your **Wi-Fi and mob
 - Highlights apps with heavy background uploads, which can help detect spyware
 - Widgets in 2x1, 2x2, 4x1 and 4x2, with custom period, network, colors, gradient, image, transparency, frosted blur and content, set from a One UI style settings screen
 - Clean One UI-style design, light and dark theme
-- English by default, follows the system language (Indonesian included)
+- Follows the system language
 - Private: no internet permission, nothing leaves your phone
 
 ## Requirements
@@ -24,8 +24,8 @@ A lightweight Android app and home-screen widget that shows your **Wi-Fi and mob
 2. Open the app and grant **Usage access**.
 3. Long-press the home screen, open Widgets and add **Data Watch**.
 
-## About the icon
-An eye made of two arcs, one for Wi-Fi and one for mobile data, with a keyhole in the middle: you watch your own data, and only you hold the key.
+## Logo
+The mark combines an eye with a keyhole. The two arcs that form the eye represent Wi-Fi and mobile data, the two connections the app monitors. The keyhole at the center stands for privacy: usage data is read and stored only on the device.
 
 ## Build
 ```
