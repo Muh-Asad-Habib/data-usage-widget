@@ -205,13 +205,13 @@ internal fun PermissionCard() {
 }
 
 @Composable
-internal fun HeroCard(label: String, s: UsageSummary, net: Net, loading: Boolean, onClick: () -> Unit) {
+internal fun HeroCard(label: String, s: UsageSummary, net: Net, loading: Boolean, onClick: (() -> Unit)?) {
     val total = s.of(net).total
     val apps = s.appsBy(net)
-    HeroSurface(Modifier.clickable(onClick = onClick)) {
+    HeroSurface(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp)
-            Ico(R.drawable.ic_chevron, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
+            if (onClick != null) Ico(R.drawable.ic_chevron, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
         }
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -281,7 +281,7 @@ internal fun RowScope.Tile(icon: Int, c: Color, label: String, value: String, sh
 }
 
 @Composable
-internal fun SsidCard(vm: MainViewModel) {
+internal fun SsidCard(vm: MainViewModel, list: List<io.github.asadhabib.datausage.data.SsidUsage> = vm.ssids) {
     val ctx = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refresh() }
     val bgLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
@@ -314,7 +314,6 @@ internal fun SsidCard(vm: MainViewModel) {
                 if (Build.VERSION.SDK_INT >= 29 && !WifiLog.hasBackground(ctx)) Hint(L.t("Allow location \"All the time\" so Wi-Fi changes are recorded while the app is closed.", "Izinkan lokasi \"Sepanjang waktu\" agar perpindahan Wi-Fi tercatat walau aplikasi tertutup.")) {
                     bgLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 }
-                val list = vm.ssids
                 val max = list.maxOfOrNull { it.bytes }?.coerceAtLeast(1) ?: 1
                 if (list.isEmpty()) Text(L.t("No Wi-Fi records for this period yet.", "Belum ada catatan Wi-Fi di periode ini."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 list.take(8).forEach { u ->

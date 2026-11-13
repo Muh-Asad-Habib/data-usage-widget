@@ -47,6 +47,7 @@ sealed interface Screen {
     data class Detail(val app: AppUsage, val label: String) : Screen
     data object Dashboard : Screen
     data class Apps(val title: String, val summary: UsageSummary, val net: Net) : Screen
+    data class Span(val title: String, val r: Range) : Screen
     data object Report : Screen
     data object Widgets : Screen
 }
@@ -89,6 +90,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var dashJob: Job? = null
 
     private var job: Job? = null
+
+    var spanSummary by mutableStateOf(UsageSummary.EMPTY)
+    var spanSsids by mutableStateOf<List<SsidUsage>>(emptyList())
+    var spanLoading by mutableStateOf(false)
+    var spanNet by mutableStateOf(Net.ALL)
+
+    fun openSpan(title: String, r: Range) {
+        open(Screen.Span(title, r))
+        spanLoading = true
+        spanNet = Net.ALL
+        val ctx = getApplication<Application>()
+        val loc = location
+        viewModelScope.launch {
+            val (s, w) = withContext(Dispatchers.IO) { repo.summary(r) to (if (loc) WifiLog.usage(ctx, repo, r) else emptyList()) }
+            spanSummary = s
+            spanSsids = w
+            spanLoading = false
+        }
+    }
 
     fun refresh() {
         val ctx = getApplication<Application>()
@@ -207,6 +227,7 @@ class MainActivity : ComponentActivity() {
                         is Screen.Detail -> DetailScreen(vm, s.app, s.label)
                         Screen.Dashboard -> DashboardScreen(vm)
                         is Screen.Apps -> AppsScreen(vm, s)
+                        is Screen.Span -> SpanScreen(vm, s)
                         Screen.Report -> ReportScreen(vm)
                         Screen.Widgets -> WidgetsScreen(vm)
                     }

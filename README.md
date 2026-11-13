@@ -5,7 +5,7 @@ A lightweight Android app and home-screen widget that shows your **Wi-Fi and mob
 **[Download the latest APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/latest)**
 
 ## Features
-- Home shows today at a glance; tap the total to open the **Dashboard**, swipe through weeks and pick any day
+- Home shows today at a glance; tap the total to open the **Dashboard**, swipe through weeks and pick any day, or open last 7 days, this month, last month or any date range with full details
 - Weekly stacked charts for total, Wi-Fi and mobile data, with top apps per day
 - Per-app usage (foreground vs. background) and usage per Wi-Fi network (SSID)
 - Highlights apps with heavy background uploads, which can help detect spyware

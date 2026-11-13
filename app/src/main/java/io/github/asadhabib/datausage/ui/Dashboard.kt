@@ -49,6 +49,16 @@ import io.github.asadhabib.datausage.data.Fmt
 import io.github.asadhabib.datausage.data.L
 import io.github.asadhabib.datausage.data.Net
 import io.github.asadhabib.datausage.data.Periods
+import io.github.asadhabib.datausage.data.Range
+import io.github.asadhabib.datausage.R
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.material3.SelectableDates
+import java.time.Instant
+import java.time.ZoneOffset
 import io.github.asadhabib.datausage.data.UsageSummary
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -71,6 +81,52 @@ internal fun dayLabel(d: LocalDate): String {
     }
 }
 
+@Composable
+private fun SpanRow(label: String, value: String?, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f), color = if (value == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (value == null) FontWeight.SemiBold else FontWeight.Normal)
+        if (value != null) Text(value, fontWeight = FontWeight.SemiBold)
+        Ico(R.drawable.ic_chevron, MaterialTheme.colorScheme.onSurfaceVariant, 18.dp)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RangePicker(onDismiss: () -> Unit, onPick: (LocalDate, LocalDate) -> Unit) {
+    val todayUtc = LocalDate.now(Periods.zone).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    val st = rememberDateRangePickerState(selectableDates = object : SelectableDates {
+        override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= todayUtc
+    })
+    fun d(ms: Long) = Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton({
+                val s = st.selectedStartDateMillis ?: return@TextButton
+                onPick(d(s), d(st.selectedEndDateMillis ?: s))
+            }, enabled = st.selectedStartDateMillis != null) { Text("OK") }
+        },
+        dismissButton = { TextButton(onDismiss) { Text(L.t("Cancel", "Batal")) } },
+    ) { DateRangePicker(st, Modifier.weight(1f)) }
+}
+
+@Composable
+fun SpanScreen(vm: MainViewModel, s: Screen.Span) {
+    var showAll by remember { mutableStateOf(false) }
+    val sum = vm.spanSummary
+    Page(s.title, onBack = { vm.back() }) {
+        item { HeroCard(s.title, sum, vm.spanNet, vm.spanLoading, null) }
+        if (vm.spanLoading) return@Page
+        item { Tiles(sum, vm.spanNet) }
+        if (vm.spanNet != Net.MOBILE) item { SsidCard(vm, vm.spanSsids) }
+        item { NetSelector(vm.spanNet) { vm.spanNet = it } }
+        appList(sum, vm.spanNet, showAll, { showAll = !showAll }) { vm.open(Screen.Detail(it, s.title)) }
+        item { BackgroundWatch(sum) { vm.open(Screen.Detail(it, s.title)) } }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DashboardScreen(vm: MainViewModel) {
@@ -79,6 +135,12 @@ fun DashboardScreen(vm: MainViewModel) {
     val idx = day.dayOfWeek.value - 1
     val label = dayLabel(day)
     val last = minOf(6, ChronoUnit.DAYS.between(monday(day), LocalDate.now(Periods.zone)).toInt())
+    var picker by remember { mutableStateOf(false) }
+    if (picker) RangePicker({ picker = false }) { s, e ->
+        picker = false
+        val title = if (s == e) dayLabel(s) else "${DateTimeFormatter.ofPattern("d MMM", Periods.locale).format(s)} – ${DateTimeFormatter.ofPattern("d MMM yyyy", Periods.locale).format(e)}"
+        vm.openSpan(title, Range(Periods.startOf(s), minOf(Periods.startOf(e.plusDays(1)), System.currentTimeMillis())))
+    }
     Page(L.t("Dashboard", "Dasbor"), onBack = { vm.back() }) {
         stickyHeader { DateStrip(day) { vm.selectDay(it) } }
         item { Text(label, Modifier.padding(start = 6.dp, top = 6.dp), fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -95,11 +157,9 @@ fun DashboardScreen(vm: MainViewModel) {
                 Text(L.t("Totals", "Ringkasan"), fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
                 Spacer(Modifier.height(6.dp))
                 vm.totals.forEach { (p, v) ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        Text(p.label, Modifier.weight(1f))
-                        Text(Fmt.bytes(v), fontWeight = FontWeight.SemiBold)
-                    }
+                    SpanRow(p.label, Fmt.bytes(v)) { vm.openSpan(p.label, Periods.range(p)) }
                 }
+                SpanRow(L.t("Pick dates", "Pilih tanggal"), null) { picker = true }
             }
         }
     }
