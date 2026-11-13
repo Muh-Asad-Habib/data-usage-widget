@@ -4,6 +4,11 @@ A lightweight Android app and home-screen widget that shows your **Wi-Fi and mob
 
 **Latest version: v1.2.0** · [Download APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.0/DataWatch-v1.2.0.apk) · [All releases](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
 
+## Screenshots
+| Home | Dashboard | Widget settings |
+|:---:|:---:|:---:|
+| <img src="docs/home.png" width="240"> | <img src="docs/dashboard.png" width="240"> | <img src="docs/widget-settings.png" width="240"> |
+
 ## Features
 - Home shows today at a glance; tap the total to open the **Dashboard**, swipe through weeks and pick any day, or open last 7 days, this month, last month or any date range with full details
 - Weekly stacked charts for total, Wi-Fi and mobile data, with top apps per day
@@ -23,9 +28,6 @@ A lightweight Android app and home-screen widget that shows your **Wi-Fi and mob
 1. Download and install the APK (allow "Install unknown apps").
 2. Open the app and grant **Usage access**.
 3. Long-press the home screen, open Widgets and add **Data Watch**.
-
-## Logo
-The mark combines an eye with a keyhole. The two arcs that form the eye represent Wi-Fi and mobile data, the two connections the app monitors. The keyhole at the center stands for privacy: usage data is read and stored only on the device.
 
 ## Build
 ```
