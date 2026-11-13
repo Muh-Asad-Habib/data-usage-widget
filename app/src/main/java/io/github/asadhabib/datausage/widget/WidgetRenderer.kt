@@ -68,6 +68,9 @@ object WidgetRenderer {
         val text = cfg.textColor
         v.setInt(R.id.refresh_bg, "setColorFilter", (text and 0x00FFFFFF) or (0x26 shl 24))
         v.setInt(R.id.refresh_icon, "setColorFilter", text)
+        // Launchers reapply onto the existing view, so undo the busy state explicitly.
+        v.setViewVisibility(R.id.refresh_icon, View.VISIBLE)
+        v.setViewVisibility(R.id.refresh_progress, View.GONE)
         if (Build.VERSION.SDK_INT >= 31) v.setColorStateList(R.id.refresh_progress, "setIndeterminateTintList", ColorStateList.valueOf(text))
         if (interactive) {
             val open = PendingIntent.getActivity(
@@ -110,7 +113,7 @@ object WidgetRenderer {
         val big = (avail / 1.25f).coerceIn(16f, maxSp)
         avail -= big * 1.25f
         v.setViewVisibility(R.id.title, if (showTitle) View.VISIBLE else View.GONE)
-        v.setTextViewText(R.id.title, cfg.title.ifBlank { data.periodText })
+        v.setTextViewText(R.id.title, cfg.title.ifBlank { data.periodText } + " · " + java.time.LocalTime.now().format(clock))
         v.setTextColor(R.id.title, sub)
         v.setTextColor(R.id.total, text)
         v.setTextViewTextSize(R.id.total, TypedValue.COMPLEX_UNIT_SP, big)
