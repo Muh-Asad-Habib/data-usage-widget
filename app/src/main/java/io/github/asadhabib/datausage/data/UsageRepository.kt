@@ -28,6 +28,9 @@ class UsageRepository(context: Context) {
         Traffic(b.rxBytes, b.txBytes)
     } catch (_: Exception) { Traffic() }
 
+    fun total(r: Range): Long =
+        device(ConnectivityManager.TYPE_WIFI, r.start, r.end).total + device(ConnectivityManager.TYPE_MOBILE, r.start, r.end).total
+
     fun summary(r: Range): UsageSummary {
         if (r.end <= r.start) return UsageSummary.EMPTY
         data class Acc(var wifi: Traffic = Traffic(), var mobile: Traffic = Traffic(), var fg: Traffic = Traffic(), var bg: Traffic = Traffic())

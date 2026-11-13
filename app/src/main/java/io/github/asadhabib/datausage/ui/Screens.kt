@@ -6,6 +6,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -79,6 +80,7 @@ import io.github.asadhabib.datausage.R
 import io.github.asadhabib.datausage.data.AppUsage
 import io.github.asadhabib.datausage.data.DayUsage
 import io.github.asadhabib.datausage.data.Fmt
+import io.github.asadhabib.datausage.data.L
 import io.github.asadhabib.datausage.data.Net
 import io.github.asadhabib.datausage.data.Period
 import io.github.asadhabib.datausage.data.Periods
@@ -97,11 +99,11 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 
-private val dayFmt = DateTimeFormatter.ofPattern("EEE", Periods.locale)
-private val dmFmt = DateTimeFormatter.ofPattern("d MMM", Periods.locale)
+internal val dayFmt = DateTimeFormatter.ofPattern("EEE", Periods.locale)
+internal val dmFmt = DateTimeFormatter.ofPattern("d MMM", Periods.locale)
 
 @Composable
-private fun Page(
+internal fun Page(
     title: String,
     onBack: (() -> Unit)? = null,
     subtitle: String? = null,
@@ -113,14 +115,22 @@ private fun Page(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // One UI style: large centred title with room above, toolbar row underneath.
         item {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp).height(64.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (onBack != null) RoundButton(R.drawable.ic_back, "Kembali", onBack) else Spacer(Modifier.width(4.dp))
-                Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                    Text(title, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (subtitle != null) Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
+            Column(
+                Modifier.fillMaxWidth().height(if (onBack == null) 210.dp else 170.dp).padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(title, fontSize = 32.sp, fontWeight = FontWeight.Normal, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (subtitle != null) Text(subtitle, Modifier.padding(top = 6.dp), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (onBack != null) RoundButton(R.drawable.ic_back, L.t("Back", "Kembali"), onBack)
+                Spacer(Modifier.weight(1f))
+                Row(content = actions)
             }
         }
         content()
@@ -129,99 +139,60 @@ private fun Page(
 }
 
 @Composable
-private fun RoundButton(icon: Int, desc: String, onClick: () -> Unit, spin: Boolean = false) {
+internal fun RoundButton(icon: Int, desc: String, onClick: () -> Unit, spin: Boolean = false) {
     val angle = if (spin) {
         val t = rememberInfiniteTransition(label = "spin")
         t.animateFloat(0f, 360f, infiniteRepeatable(tween(800, easing = LinearEasing)), label = "a").value
     } else 0f
     Box(
-        Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+        Modifier.size(48.dp).clip(CircleShape)
             .semantics { contentDescription = desc }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Box(Modifier.rotate(angle)) { Ico(icon, size = 20.dp) } }
+    ) { Box(Modifier.rotate(angle)) { Ico(icon, size = 24.dp) } }
 }
 
-private val timeFmt = DateTimeFormatter.ofPattern("HH:mm", Periods.locale)
+internal val timeFmt = DateTimeFormatter.ofPattern("HH:mm", Periods.locale)
 
-private fun day(ms: Long) = Instant.ofEpochMilli(ms).atZone(Periods.zone).toLocalDate()
+internal fun weekLabel(s: LocalDate) = "${dmFmt.format(s)} – ${dmFmt.format(s.plusDays(6))}"
+
+internal fun day(ms: Long) = Instant.ofEpochMilli(ms).atZone(Periods.zone).toLocalDate()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(vm: MainViewModel) {
-    var picker by remember { mutableStateOf(false) }
+    var showAll by remember { mutableStateOf(false) }
     val sub = when {
-        vm.loading -> "Memperbarui…"
-        vm.updatedAt > 0 -> "Diperbarui " + Instant.ofEpochMilli(vm.updatedAt).atZone(Periods.zone).format(timeFmt)
+        vm.loading -> L.t("Updating…", "Memperbarui…")
+        vm.updatedAt > 0 -> L.t("Updated ", "Diperbarui ") + Instant.ofEpochMilli(vm.updatedAt).atZone(Periods.zone).format(timeFmt)
         else -> null
     }
     Page("Pantau Data", subtitle = sub, actions = {
-        RoundButton(R.drawable.ic_refresh, "Muat ulang", { if (!vm.loading) vm.refresh() }, spin = vm.loading)
-        RoundButton(R.drawable.ic_chart, "Laporan", { vm.open(Screen.Report) })
+        RoundButton(R.drawable.ic_refresh, L.t("Refresh", "Muat ulang"), { if (!vm.loading) vm.refresh() }, spin = vm.loading)
+        RoundButton(R.drawable.ic_chart, L.t("Report", "Laporan"), { vm.open(Screen.Report) })
         RoundButton(R.drawable.ic_widgets, "Widget", { vm.open(Screen.Widgets) })
     }) {
         if (!vm.granted) {
             item { PermissionCard() }
             return@Page
         }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(Period.entries) { p ->
-                    FilterChip(
-                        selected = vm.period == p,
-                        onClick = { if (p == Period.CUSTOM) picker = true else vm.select(p) },
-                        label = { Text(p.label, Modifier.padding(vertical = 8.dp)) },
-                        leadingIcon = if (p == Period.CUSTOM) ({ Ico(R.drawable.ic_calendar, size = 16.dp) }) else null,
-                        shape = RoundedCornerShape(50),
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(true, vm.period == p,
-                            borderColor = MaterialTheme.colorScheme.outline, selectedBorderColor = Color.Transparent),
-                    )
-                }
-            }
-        }
-        item { HeroCard(Periods.describe(vm.period, vm.range), vm.summary, vm.net, vm.loading) }
+        item { HeroCard(L.t("Today", "Hari ini"), vm.summary, vm.net, vm.loading) { vm.openDashboard() } }
         item { Tiles(vm.summary, vm.net) }
         if (vm.net != Net.MOBILE) item { SsidCard(vm) }
         item { NetSelector(vm.net) { vm.net = it } }
-        appList(vm.summary, vm.net) { vm.open(Screen.Detail(it)) }
-        item { BackgroundWatch(vm.summary) { vm.open(Screen.Detail(it)) } }
+        appList(vm.summary, vm.net, showAll, { showAll = !showAll }) { vm.open(Screen.Detail(it, L.t("Today", "Hari ini"))) }
+        item { BackgroundWatch(vm.summary) { vm.open(Screen.Detail(it, L.t("Today", "Hari ini"))) } }
     }
 
-    if (picker) {
-        val st = rememberDateRangePickerState()
-        DatePickerDialog(
-            onDismissRequest = { picker = false },
-            confirmButton = {
-                TextButton({
-                    val s = st.selectedStartDateMillis
-                    val e = st.selectedEndDateMillis ?: s
-                    if (s != null && e != null) {
-                        val sd = Instant.ofEpochMilli(s).atZone(ZoneOffset.UTC).toLocalDate()
-                        val ed = Instant.ofEpochMilli(e).atZone(ZoneOffset.UTC).toLocalDate()
-                        vm.select(Period.CUSTOM, Range(Periods.startOf(sd), Periods.startOf(ed.plusDays(1))))
-                    }
-                    picker = false
-                }) { Text("Pilih") }
-            },
-            dismissButton = { TextButton({ picker = false }) { Text("Batal") } },
-        ) { DateRangePicker(st, Modifier.weight(1f)) }
-    }
 }
 
 @Composable
-private fun PermissionCard() {
+internal fun PermissionCard() {
     val ctx = LocalContext.current
     SCard {
         Ico(R.drawable.ic_shield, MaterialTheme.colorScheme.primary, 36.dp)
         Spacer(Modifier.height(12.dp))
-        Text("Izinkan akses penggunaan", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(L.t("Allow usage access", "Izinkan akses penggunaan"), fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(
             "Data Wi-Fi & seluler per aplikasi dibaca dari statistik jaringan sistem. Android mewajibkan izin " +
@@ -229,40 +200,42 @@ private fun PermissionCard() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
-        Button({ UsageAccess.open(ctx) }, Modifier.fillMaxWidth()) { Text("Buka pengaturan") }
+        Button({ UsageAccess.open(ctx) }, Modifier.fillMaxWidth()) { Text(L.t("Open settings", "Buka pengaturan")) }
     }
 }
 
 @Composable
-private fun HeroCard(label: String, s: UsageSummary, net: Net, loading: Boolean) {
+internal fun HeroCard(label: String, s: UsageSummary, net: Net, loading: Boolean, onClick: () -> Unit) {
     val total = s.of(net).total
     val apps = s.appsBy(net)
-    HeroSurface {
-        Text(label.uppercase(Periods.locale), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp,
-            fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+    HeroSurface(Modifier.clickable(onClick = onClick)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp)
+            Ico(R.drawable.ic_chevron, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
+        }
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(Fmt.bytes(total), fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 42.sp)
-                Text("Total ${net.label.lowercase(Periods.locale)}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (net == Net.ALL) L.t("Total usage", "Total pemakaian") else L.t("Total", "Total") + " " + net.label.lowercase(Periods.locale), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.width(12.dp))
             Box(contentAlignment = Alignment.Center) {
                 Donut(apps.take(3).map { it.of(net).total }, total, Modifier.size(104.dp), stroke = 14.dp)
-                Text("${apps.size}\napl", fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.Center,
+                Text("${apps.size}\n" + L.t("apps", "apl"), fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             }
         }
         Spacer(Modifier.height(14.dp))
         apps.take(3).forEachIndexed { i, a -> Legend(ChartColors[i], a.label, Fmt.bytes(a.of(net).total)) }
         val rest = total - apps.take(3).sumOf { it.of(net).total }
-        if (apps.size > 3 && rest > 0) Legend(OtherColor, "Lainnya", Fmt.bytes(rest))
+        if (apps.size > 3 && rest > 0) Legend(OtherColor, L.t("Other", "Lainnya"), Fmt.bytes(rest))
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(2.dp)))
     }
 }
 
 @Composable
-private fun Legend(c: Color, name: String, value: String) {
+internal fun Legend(c: Color, name: String, value: String) {
     Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(c))
         Text(name, Modifier.weight(1f).padding(start = 10.dp), maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
@@ -271,13 +244,13 @@ private fun Legend(c: Color, name: String, value: String) {
 }
 
 @Composable
-private fun Tiles(s: UsageSummary, net: Net) {
+internal fun Tiles(s: UsageSummary, net: Net) {
     val t = s.of(net)
     val all = (s.wifi.total + s.mobile.total).coerceAtLeast(1)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Tile(R.drawable.ic_wifi, WifiColor, "Wi-Fi", Fmt.bytes(s.wifi.total), s.wifi.total.toFloat() / all)
-            Tile(R.drawable.ic_cell, MobileColor, "Data seluler", Fmt.bytes(s.mobile.total), s.mobile.total.toFloat() / all)
+            Tile(R.drawable.ic_cell, MobileColor, L.t("Mobile data", "Data seluler"), Fmt.bytes(s.mobile.total), s.mobile.total.toFloat() / all)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Tile(R.drawable.ic_down, ChartColors[1], "Download", Fmt.bytes(t.rx), null)
@@ -287,7 +260,7 @@ private fun Tiles(s: UsageSummary, net: Net) {
 }
 
 @Composable
-private fun RowScope.Tile(icon: Int, c: Color, label: String, value: String, share: Float? = null) {
+internal fun RowScope.Tile(icon: Int, c: Color, label: String, value: String, share: Float? = null) {
     val shape = RoundedCornerShape(22.dp)
     Column(
         Modifier.weight(1f).clip(shape).background(MaterialTheme.colorScheme.surface)
@@ -308,7 +281,7 @@ private fun RowScope.Tile(icon: Int, c: Color, label: String, value: String, sha
 }
 
 @Composable
-private fun SsidCard(vm: MainViewModel) {
+internal fun SsidCard(vm: MainViewModel) {
     val ctx = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refresh() }
     val bgLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
@@ -318,36 +291,36 @@ private fun SsidCard(vm: MainViewModel) {
                 Ico(R.drawable.ic_wifi, WifiColor, 18.dp)
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text("Wi-Fi per jaringan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("Berdasarkan nama Wi-Fi (SSID)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(L.t("Wi-Fi by network", "Wi-Fi per jaringan"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(L.t("By Wi-Fi name (SSID)", "Berdasarkan nama Wi-Fi (SSID)"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(Modifier.height(12.dp))
         when {
             !vm.location -> {
                 Text(
-                    "Android hanya memberi nama Wi-Fi jika izin lokasi aktif. Lokasi tidak dipakai untuk hal lain dan tidak ada data yang keluar dari HP.",
+                    L.t("Android only shares Wi-Fi names when location access is allowed. Location is not used for anything else and no data leaves your phone.", "Android hanya memberi nama Wi-Fi jika izin lokasi aktif. Lokasi tidak dipakai untuk hal lain dan tidak ada data yang keluar dari HP."),
                     fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
                 Button({
                     launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                }, Modifier.fillMaxWidth().height(48.dp)) { Text("Izinkan lokasi") }
+                }, Modifier.fillMaxWidth().height(48.dp)) { Text(L.t("Allow location", "Izinkan lokasi")) }
             }
             else -> {
-                if (!vm.locationOn) Hint("Lokasi HP sedang mati, nama Wi-Fi baru tidak bisa dicatat.") {
+                if (!vm.locationOn) Hint(L.t("Location is off, so new Wi-Fi names can't be recorded.", "Lokasi HP sedang mati, nama Wi-Fi baru tidak bisa dicatat.")) {
                     try { ctx.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) } catch (_: Exception) {}
                 }
-                if (Build.VERSION.SDK_INT >= 29 && !WifiLog.hasBackground(ctx)) Hint("Izinkan lokasi \"Sepanjang waktu\" agar perpindahan Wi-Fi tercatat walau aplikasi tertutup.") {
+                if (Build.VERSION.SDK_INT >= 29 && !WifiLog.hasBackground(ctx)) Hint(L.t("Allow location \"All the time\" so Wi-Fi changes are recorded while the app is closed.", "Izinkan lokasi \"Sepanjang waktu\" agar perpindahan Wi-Fi tercatat walau aplikasi tertutup.")) {
                     bgLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 }
                 val list = vm.ssids
                 val max = list.maxOfOrNull { it.bytes }?.coerceAtLeast(1) ?: 1
-                if (list.isEmpty()) Text("Belum ada catatan Wi-Fi di periode ini.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (list.isEmpty()) Text(L.t("No Wi-Fi records for this period yet.", "Belum ada catatan Wi-Fi di periode ini."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 list.take(8).forEach { u ->
                     Column(Modifier.padding(vertical = 6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(u.ssid ?: "Belum tercatat", Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            Text(u.ssid ?: L.t("Not recorded", "Belum tercatat"), Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 fontWeight = if (u.ssid != null) FontWeight.Medium else FontWeight.Normal,
                                 color = if (u.ssid != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(Fmt.bytes(u.bytes), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
@@ -358,7 +331,7 @@ private fun SsidCard(vm: MainViewModel) {
                 }
                 WifiLog.since(ctx)?.let {
                     Spacer(Modifier.height(4.dp))
-                    Text("Tercatat sejak " + Instant.ofEpochMilli(it).atZone(Periods.zone).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Periods.locale)),
+                    Text(L.t("Recorded since ", "Tercatat sejak ") + Instant.ofEpochMilli(it).atZone(Periods.zone).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Periods.locale)),
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -367,7 +340,7 @@ private fun SsidCard(vm: MainViewModel) {
 }
 
 @Composable
-private fun Hint(text: String, onClick: () -> Unit) {
+internal fun Hint(text: String, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(14.dp))
             .background(ChartColors[3].copy(alpha = .12f)).clickable(onClick = onClick).padding(12.dp),
@@ -379,7 +352,7 @@ private fun Hint(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun NetSelector(net: Net, onChange: (Net) -> Unit) {
+internal fun NetSelector(net: Net, onChange: (Net) -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceVariant).padding(4.dp),
     ) {
@@ -398,23 +371,43 @@ private fun NetSelector(net: Net, onChange: (Net) -> Unit) {
     }
 }
 
-private fun LazyListScope.appList(s: UsageSummary, net: Net, onClick: (AppUsage) -> Unit) {
+internal const val PREVIEW_APPS = 5
+
+internal fun LazyListScope.appList(
+    s: UsageSummary, net: Net, showAll: Boolean, onToggle: () -> Unit, onClick: (AppUsage) -> Unit,
+) {
     val apps = s.appsBy(net)
     val max = apps.firstOrNull()?.of(net)?.total ?: 1L
-    item { SectionTitle("Aplikasi (${apps.size})") }
-    if (apps.isEmpty()) item {
-        SCard { Text("Belum ada pemakaian di periode ini.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    item { SectionTitle(L.t("Apps", "Aplikasi"), "${apps.size}") }
+    if (apps.isEmpty()) {
+        item { SCard { Text(L.t("No usage for this period yet.", "Belum ada pemakaian di periode ini."), color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        return
     }
-    items(apps, key = { it.uid }) { a -> AppRow(a, net, max, onClick) }
+    val shown = if (showAll) apps else apps.take(PREVIEW_APPS)
+    item {
+        val cs = MaterialTheme.colorScheme
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(cs.surface).animateContentSize()) {
+            shown.forEachIndexed { i, a ->
+                if (i > 0) Box(Modifier.padding(start = 72.dp).fillMaxWidth().height(1.dp).background(cs.outline))
+                AppRow(a, net, max, onClick)
+            }
+            if (apps.size > PREVIEW_APPS) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outline))
+                Text(
+                    if (showAll) L.t("Show less", "Tampilkan lebih sedikit") else L.t("See all", "Lihat semua") + " (${apps.size})",
+                    Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 16.dp),
+                    color = cs.primary, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
 }
 
 @Composable
-private fun AppRow(a: AppUsage, net: Net, max: Long, onClick: (AppUsage) -> Unit) {
+internal fun AppRow(a: AppUsage, net: Net, max: Long, onClick: (AppUsage) -> Unit) {
     val v = a.of(net)
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f), RoundedCornerShape(20.dp))
-            .clickable { onClick(a) }.padding(14.dp),
+        Modifier.fillMaxWidth().clickable { onClick(a) }.padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppIcon(a.packageName)
@@ -435,27 +428,27 @@ private fun AppRow(a: AppUsage, net: Net, max: Long, onClick: (AppUsage) -> Unit
 }
 
 @Composable
-private fun Bar(f: Float, c: Color = Accent, h: Dp = 6.dp) {
+internal fun Bar(f: Float, c: Color = Accent, h: Dp = 6.dp) {
     Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceVariant)) {
         Box(Modifier.fillMaxWidth(f.coerceIn(0.02f, 1f)).height(h).clip(RoundedCornerShape(50)).background(c))
     }
 }
 
 @Composable
-private fun BackgroundWatch(s: UsageSummary, onClick: (AppUsage) -> Unit) {
+internal fun BackgroundWatch(s: UsageSummary, onClick: (AppUsage) -> Unit) {
     val list = s.apps.filter { it.background.tx > 0 }.sortedByDescending { it.background.tx }.take(5)
     SCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Ico(R.drawable.ic_shield, ChartColors[3])
-            Text("Upload di latar belakang", Modifier.padding(start = 10.dp), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text(L.t("Background uploads", "Upload di latar belakang"), Modifier.padding(start = 10.dp), fontWeight = FontWeight.Bold, fontSize = 17.sp)
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "Aplikasi yang mengirim data saat tidak sedang dibuka. Upload besar dari aplikasi yang jarang dipakai patut dicurigai.",
+            L.t("Apps that send data while you are not using them. Large uploads from apps you rarely open are worth a look.", "Aplikasi yang mengirim data saat tidak sedang dibuka. Upload besar dari aplikasi yang jarang dipakai patut dicurigai."),
             fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
-        if (list.isEmpty()) Text("Tidak ada.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (list.isEmpty()) Text(L.t("None.", "Tidak ada."), color = MaterialTheme.colorScheme.onSurfaceVariant)
         list.forEach { a ->
             val sus = a.background.tx > a.background.rx && a.background.tx > 20_000_000
             Row(
@@ -464,7 +457,7 @@ private fun BackgroundWatch(s: UsageSummary, onClick: (AppUsage) -> Unit) {
             ) {
                 AppIcon(a.packageName, 30.dp)
                 Text(a.label, Modifier.weight(1f).padding(horizontal = 10.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (sus) Text("Periksa ", color = Color(0xFFE5484D), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                if (sus) Text(L.t("Check ", "Periksa "), color = Color(0xFFE5484D), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text("↑ ${Fmt.bytes(a.background.tx)}", fontWeight = FontWeight.SemiBold)
             }
         }
@@ -472,7 +465,7 @@ private fun BackgroundWatch(s: UsageSummary, onClick: (AppUsage) -> Unit) {
 }
 
 @Composable
-fun DetailScreen(vm: MainViewModel, a: AppUsage) {
+fun DetailScreen(vm: MainViewModel, a: AppUsage, label: String) {
     val ctx = LocalContext.current
     Page(a.label, onBack = { vm.back() }) {
         item {
@@ -480,7 +473,7 @@ fun DetailScreen(vm: MainViewModel, a: AppUsage) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(a.packageName, 52.dp)
                     Column(Modifier.padding(start = 14.dp)) {
-                        Text(Periods.describe(vm.period, vm.range), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         Text(Fmt.bytes(a.all.total), fontSize = 30.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -491,7 +484,7 @@ fun DetailScreen(vm: MainViewModel, a: AppUsage) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Tile(R.drawable.ic_wifi, WifiColor, "Wi-Fi", Fmt.bytes(a.wifi.total))
-                    Tile(R.drawable.ic_cell, MobileColor, "Data seluler", Fmt.bytes(a.mobile.total))
+                    Tile(R.drawable.ic_cell, MobileColor, L.t("Mobile data", "Data seluler"), Fmt.bytes(a.mobile.total))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Tile(R.drawable.ic_up, ChartColors[3], "Upload", Fmt.bytes(a.all.tx))
@@ -501,19 +494,19 @@ fun DetailScreen(vm: MainViewModel, a: AppUsage) {
         }
         item {
             SCard {
-                Text("Latar depan vs belakang", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(L.t("Foreground vs background", "Latar depan vs belakang"), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Spacer(Modifier.height(12.dp))
                 val tot = a.all.total.coerceAtLeast(1)
-                Legend(Accent, "Saat dibuka", Fmt.bytes(a.foreground.total))
+                Legend(Accent, L.t("While open", "Saat dibuka"), Fmt.bytes(a.foreground.total))
                 Bar(a.foreground.total.toFloat() / tot)
                 Spacer(Modifier.height(10.dp))
-                Legend(ChartColors[3], "Latar belakang (↑ ${Fmt.bytes(a.background.tx)})", Fmt.bytes(a.background.total))
+                Legend(ChartColors[3], L.t("Background", "Latar belakang") + " (↑ ${Fmt.bytes(a.background.tx)})", Fmt.bytes(a.background.total))
                 Bar(a.background.total.toFloat() / tot, ChartColors[3])
             }
         }
         item {
             SCard {
-                Text("14 hari terakhir", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(L.t("Last 14 days", "14 hari terakhir"), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Spacer(Modifier.height(12.dp))
                 if (vm.detailDays.isEmpty()) LinearProgressIndicator(Modifier.fillMaxWidth())
                 else DayBars(vm.detailDays, labelEvery = 2)
@@ -522,7 +515,7 @@ fun DetailScreen(vm: MainViewModel, a: AppUsage) {
         a.packageName?.let { pkg ->
             item {
                 FilledTonalButton({ UsageAccess.openAppSettings(ctx, pkg) }, Modifier.fillMaxWidth()) {
-                    Text("Buka info aplikasi (batasi data / izin)")
+                    Text(L.t("Open app info (restrict data / permissions)", "Buka info aplikasi (batasi data / izin)"))
                 }
             }
         }
@@ -530,10 +523,10 @@ fun DetailScreen(vm: MainViewModel, a: AppUsage) {
 }
 
 @Composable
-private fun DayBars(days: List<DayUsage>, labelEvery: Int = 1, fmt: DateTimeFormatter = dmFmt) {
+internal fun DayBars(days: List<DayUsage>, labelEvery: Int = 1, fmt: DateTimeFormatter = dmFmt) {
     val max = (days.maxOfOrNull { it.total } ?: 0L).coerceAtLeast(1)
     val track = MaterialTheme.colorScheme.surfaceVariant
-    Text("Maks ${Fmt.bytes(max)}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(L.t("Max", "Maks") + " ${Fmt.bytes(max)}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Canvas(Modifier.fillMaxWidth().height(140.dp).padding(top = 6.dp)) {
         val slot = size.width / days.size
         val bw = slot * .55f
@@ -561,13 +554,13 @@ private fun DayBars(days: List<DayUsage>, labelEvery: Int = 1, fmt: DateTimeForm
         Box(Modifier.size(10.dp).clip(CircleShape).background(WifiColor))
         Text(" Wi-Fi   ", fontSize = 12.sp)
         Box(Modifier.size(10.dp).clip(CircleShape).background(MobileColor))
-        Text(" Data seluler", fontSize = 12.sp)
+        Text(L.t(" Mobile data", " Data seluler"), fontSize = 12.sp)
     }
 }
 
 @Composable
 fun ReportScreen(vm: MainViewModel) {
-    Page("Laporan mingguan", onBack = { vm.back() }) {
+    Page(L.t("Weekly report", "Laporan mingguan"), onBack = { vm.back() }) {
         item {
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceVariant).padding(4.dp),
@@ -593,29 +586,29 @@ fun ReportScreen(vm: MainViewModel) {
         val counted = w.days.count { it.start <= System.currentTimeMillis() }.coerceAtLeast(1)
         item {
             SCard {
-                Text("${dmFmt.format(w.start)} – ${dmFmt.format(w.start.plusDays(6))}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(weekLabel(w.start), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(Fmt.bytes(total), fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                Text("Rata-rata ${Fmt.bytes(total / counted)} per hari", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(L.t("Average ${Fmt.bytes(total / counted)} per day", "Rata-rata ${Fmt.bytes(total / counted)} per hari"), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(14.dp))
                 DayBars(w.days, fmt = dayFmt)
             }
         }
         item {
             SCard {
-                Text("Pemakaian per jam", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(L.t("Usage by hour", "Pemakaian per jam"), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Spacer(Modifier.height(12.dp))
                 Heatmap(w.hourly, w.start)
             }
         }
         val top = w.summary.appsBy(Net.ALL).take(3)
         if (top.isNotEmpty()) {
-            item { SectionTitle("Aplikasi teratas") }
+            item { SectionTitle(L.t("Top apps", "Aplikasi teratas")) }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     top.forEachIndexed { i, a ->
                         Column(
                             Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surface)
-                                .clickable { vm.open(Screen.Detail(a)) }.padding(14.dp),
+                                .clickable { vm.open(Screen.Detail(a, weekLabel(w.start))) }.padding(14.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             AppIcon(a.packageName, 44.dp, ChartColors[i])
@@ -627,12 +620,12 @@ fun ReportScreen(vm: MainViewModel) {
                 }
             }
         }
-        item { BackgroundWatch(w.summary) { vm.open(Screen.Detail(it)) } }
+        item { BackgroundWatch(w.summary) { vm.open(Screen.Detail(it, weekLabel(w.start))) } }
     }
 }
 
 @Composable
-private fun Heatmap(m: Array<LongArray>, start: LocalDate) {
+internal fun Heatmap(m: Array<LongArray>, start: LocalDate) {
     val max = (m.maxOf { r -> r.maxOrNull() ?: 0L }).coerceAtLeast(1)
     val track = MaterialTheme.colorScheme.surfaceVariant
     Row {
@@ -670,19 +663,19 @@ fun WidgetsScreen(vm: MainViewModel) {
             SCard {
                 Ico(R.drawable.ic_widgets, MaterialTheme.colorScheme.primary, 32.dp)
                 Spacer(Modifier.height(10.dp))
-                Text("Widget pemakaian data", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(L.t("Data usage widgets", "Widget pemakaian data"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Text(
-                    "Atur periode, Wi-Fi/data, isi, warna, gradien, gambar galeri dan transparansi.",
+                    L.t("Set the period, network, content, colors, gradient, gallery image and transparency.", "Atur periode, Wi-Fi/data, isi, warna, gradien, gambar galeri dan transparansi."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp,
                 )
                 Spacer(Modifier.height(14.dp))
-                Text("Pilih ukuran", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(L.t("Choose a size", "Pilih ukuran"), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 Spacer(Modifier.height(6.dp))
                 val sizes = listOf(
-                    Triple("2x1", "Mini · total, Wi-Fi, seluler", Widget2x1::class.java),
-                    Triple("2x2", "Kotak · + bar rasio", Widget2x2::class.java),
-                    Triple("4x1", "Baris · total, Wi-Fi, seluler", Widget4x1::class.java),
-                    Triple("4x2", "Lengkap · + daftar aplikasi & donat", UsageWidgetProvider::class.java),
+                    Triple("2x1", L.t("Mini · total, Wi-Fi, mobile", "Mini · total, Wi-Fi, seluler"), Widget2x1::class.java),
+                    Triple("2x2", L.t("Square · + ratio bar", "Kotak · + bar rasio"), Widget2x2::class.java),
+                    Triple("4x1", L.t("Row · total, Wi-Fi, mobile", "Baris · total, Wi-Fi, seluler"), Widget4x1::class.java),
+                    Triple("4x2", L.t("Full · + app list & donut", "Lengkap · + daftar aplikasi & donat"), UsageWidgetProvider::class.java),
                 )
                 sizes.forEach { (size, desc, cls) ->
                     Row(
@@ -701,7 +694,7 @@ fun WidgetsScreen(vm: MainViewModel) {
                 }
             }
         }
-        if (ids.isNotEmpty()) item { SectionTitle("Widget aktif") }
+        if (ids.isNotEmpty()) item { SectionTitle(L.t("Active widgets", "Widget aktif")) }
         items(ids) { id ->
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface)
@@ -715,7 +708,7 @@ fun WidgetsScreen(vm: MainViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Widget #$id", Modifier.weight(1f), fontWeight = FontWeight.Medium)
-                Text("Atur", color = MaterialTheme.colorScheme.primary)
+                Text(L.t("Edit", "Atur"), color = MaterialTheme.colorScheme.primary)
                 Ico(R.drawable.ic_chevron, MaterialTheme.colorScheme.primary, 18.dp)
             }
         }

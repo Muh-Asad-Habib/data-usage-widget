@@ -44,7 +44,9 @@ import java.time.temporal.TemporalAdjusters
 
 sealed interface Screen {
     data object Home : Screen
-    data class Detail(val app: AppUsage) : Screen
+    data class Detail(val app: AppUsage, val label: String) : Screen
+    data object Dashboard : Screen
+    data class Apps(val title: String, val summary: UsageSummary, val net: Net) : Screen
     data object Report : Screen
     data object Widgets : Screen
 }
@@ -56,13 +58,14 @@ class WeekReport(
     val summary: UsageSummary,
 )
 
+/** One Monday–Sunday week, one summary per day (future days are empty). */
+class DashWeek(val start: LocalDate, val days: List<UsageSummary>)
+
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = UsageRepository(app)
 
     val stack = mutableStateListOf<Screen>(Screen.Home)
     var granted by mutableStateOf(UsageAccess.granted(app))
-    var period by mutableStateOf(Period.TODAY)
-    var custom by mutableStateOf(Range(0, 0))
     var net by mutableStateOf(Net.ALL)
     var loading by mutableStateOf(false)
     var summary by mutableStateOf(UsageSummary.EMPTY)
@@ -79,6 +82,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var locationOn by mutableStateOf(WifiLog.locationOn(app))
     var updatedAt by mutableStateOf(0L)
 
+    var dashDay by mutableStateOf(LocalDate.now(Periods.zone))
+    var dashWeek by mutableStateOf<DashWeek?>(null)
+    var totals by mutableStateOf<List<Pair<Period, Long>>>(emptyList())
+    private val weeks = HashMap<LocalDate, DashWeek>()
+    private var dashJob: Job? = null
+
     private var job: Job? = null
 
     fun refresh() {
@@ -87,7 +96,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         location = WifiLog.hasLocation(ctx)
         locationOn = WifiLog.locationOn(ctx)
         if (!granted) return
-        val r = Periods.range(period, custom.start, custom.end)
+        val r = Periods.range(Period.TODAY)
         range = r
         job?.cancel()
         loading = true
@@ -105,10 +114,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         WidgetUpdater.updateAll(ctx)
     }
 
-    fun select(p: Period, r: Range? = null) {
-        period = p
-        if (r != null) custom = r
-        refresh()
+    fun openDashboard() {
+        weeks.clear()
+        open(Screen.Dashboard)
+        selectDay(LocalDate.now(Periods.zone))
+        viewModelScope.launch {
+            totals = withContext(Dispatchers.IO) {
+                listOf(Period.LAST_7, Period.THIS_MONTH, Period.LAST_MONTH).map { it to repo.total(Periods.range(it)) }
+            }
+        }
+    }
+
+    fun selectDay(d: LocalDate) {
+        val today = LocalDate.now(Periods.zone)
+        dashDay = if (d.isAfter(today)) today else d
+        val start = dashDay.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        if (dashWeek?.start == start) return
+        weeks[start]?.let { dashWeek = it; return }
+        dashJob?.cancel()
+        dashJob = viewModelScope.launch {
+            val w = withContext(Dispatchers.IO) {
+                val now = System.currentTimeMillis()
+                DashWeek(start, (0..6).map {
+                    val day = start.plusDays(it.toLong())
+                    if (day.isAfter(today)) UsageSummary.EMPTY
+                    else repo.summary(Range(Periods.startOf(day), minOf(Periods.startOf(day.plusDays(1)), now)))
+                })
+            }
+            weeks[start] = w
+            dashWeek = w
+        }
     }
 
     fun open(s: Screen) {
@@ -169,7 +204,9 @@ class MainActivity : ComponentActivity() {
                     BackHandler(vm.stack.size > 1) { vm.back() }
                     when (val s = vm.stack.last()) {
                         Screen.Home -> HomeScreen(vm)
-                        is Screen.Detail -> DetailScreen(vm, s.app)
+                        is Screen.Detail -> DetailScreen(vm, s.app, s.label)
+                        Screen.Dashboard -> DashboardScreen(vm)
+                        is Screen.Apps -> AppsScreen(vm, s)
                         Screen.Report -> ReportScreen(vm)
                         Screen.Widgets -> WidgetsScreen(vm)
                     }

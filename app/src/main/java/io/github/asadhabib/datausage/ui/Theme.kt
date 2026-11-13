@@ -53,44 +53,42 @@ val MobileColor = Color(CELL_COLOR)
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
+    // One UI palette: pure black / light grey canvas, flat cards without borders.
     val scheme = if (dark) darkColorScheme(
-        primary = Color(0xFF7DA4FF), onPrimary = Color(0xFF0A1A3F), background = Color(0xFF0A0C11),
-        surface = Color(0xFF14171E), surfaceVariant = Color(0xFF1F232C), onSurface = Color(0xFFF1F3F7),
-        onSurfaceVariant = Color(0xFF9AA1AE), secondaryContainer = Color(0xFF233056), outline = Color(0xFF2A2F3A),
-        primaryContainer = Color(0xFF1B2A55),
+        primary = Color(0xFF6E9EFF), onPrimary = Color(0xFF0A1A3F), background = Color.Black,
+        surface = Color(0xFF171717), surfaceVariant = Color(0xFF262626), onSurface = Color(0xFFFAFAFA),
+        onSurfaceVariant = Color(0xFF9E9E9E), secondaryContainer = Color(0xFF253252), outline = Color(0xFF262626),
+        primaryContainer = Color(0xFF171717),
     ) else lightColorScheme(
-        primary = Accent, background = Color(0xFFF3F5F9), surface = Color.White,
-        surfaceVariant = Color(0xFFEBEEF3), onSurface = Color(0xFF12151B), onSurfaceVariant = Color(0xFF656B78),
-        secondaryContainer = Color(0xFFDCE6FF), outline = Color(0xFFE3E6EC), primaryContainer = Color(0xFFE3EBFF),
+        primary = Color(0xFF3E91FF), background = Color(0xFFF2F2F2), surface = Color(0xFFFCFCFC),
+        surfaceVariant = Color(0xFFEAEAEA), onSurface = Color(0xFF111111), onSurfaceVariant = Color(0xFF737373),
+        secondaryContainer = Color(0xFFDDE9FF), outline = Color(0xFFE8E8E8), primaryContainer = Color(0xFFFCFCFC),
     )
     MaterialTheme(colorScheme = scheme, content = content)
 }
 
 @Composable
 fun SCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(26.dp)
     Column(
         modifier
             .fillMaxWidth()
             .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f), shape)
             .padding(20.dp),
         content = content,
     )
 }
 
-/** Card with a soft accent gradient, used for the main number on a screen. */
+/** Main number card; kept flat like One UI's Device care cards. */
 @Composable
 fun HeroSurface(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(26.dp)
     Column(
         modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.linearGradient(listOf(cs.primaryContainer, cs.surface)))
-            .border(1.dp, cs.primary.copy(alpha = .18f), shape)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(22.dp),
         content = content,
     )
@@ -102,10 +100,10 @@ fun Ico(res: Int, tint: Color = MaterialTheme.colorScheme.onSurface, size: Dp = 
 
 @Composable
 fun SectionTitle(text: String, trailing: String? = null) = Row(
-    Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 2.dp),
+    Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 2.dp),
     verticalAlignment = Alignment.CenterVertically,
 ) {
-    Text(text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
     if (trailing != null) Text(trailing, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
