@@ -104,7 +104,7 @@
                     android:layout_weight="1"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="Seluler"
+                    android:text="@string/mobile"
                     android:textColor="#B315171A"
                     android:textSize="12sp" />
                 <TextView

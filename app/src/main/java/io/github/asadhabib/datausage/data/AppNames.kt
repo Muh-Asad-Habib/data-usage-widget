@@ -11,10 +11,10 @@ object AppNames {
     fun resolve(ctx: Context, uid: Int): Pair<String, String?> = cache.getOrPut(uid) {
         val pm = ctx.packageManager
         when (uid) {
-            NetworkStats.Bucket.UID_REMOVED -> "Aplikasi yang sudah dihapus" to null
+            NetworkStats.Bucket.UID_REMOVED -> L.t("Removed apps", "Aplikasi yang sudah dihapus") to null
             NetworkStats.Bucket.UID_TETHERING -> "Hotspot & tethering" to null
-            0 -> "Sistem (root)" to null
-            1000 -> "Sistem Android" to "android"
+            0 -> L.t("System (root)", "Sistem (root)") to null
+            1000 -> L.t("Android System", "Sistem Android") to "android"
             else -> {
                 val pkgs = pm.getPackagesForUid(uid).orEmpty()
                 val main = pkgs.firstOrNull { p ->

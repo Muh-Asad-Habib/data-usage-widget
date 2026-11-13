@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.asadhabib.datausage.R
+import io.github.asadhabib.datausage.data.L
 import io.github.asadhabib.datausage.data.Net
 import io.github.asadhabib.datausage.data.Period
 import io.github.asadhabib.datausage.ui.AppTheme
@@ -81,12 +82,12 @@ private val Swatches = listOf(
 private class Preset(val name: String, val apply: (WidgetConfig) -> WidgetConfig)
 
 private val Presets = listOf(
-    Preset("Terang") { it.copy(bgType = BgType.SOLID, color1 = 0xFFE4E5EA.toInt(), opacity = 90, dim = 0, textColor = 0xFF15171A.toInt()) },
-    Preset("Gelap") { it.copy(bgType = BgType.SOLID, color1 = 0xFF17171A.toInt(), opacity = 92, dim = 0, textColor = 0xFFFFFFFF.toInt()) },
-    Preset("Kaca") { it.copy(bgType = BgType.SOLID, color1 = 0xFFFFFFFF.toInt(), opacity = 35, dim = 0, textColor = 0xFFFFFFFF.toInt()) },
-    Preset("Biru") { it.copy(bgType = BgType.GRADIENT, color1 = 0xFF3D7BFF.toInt(), color2 = 0xFF1B3A8C.toInt(), opacity = 100, textColor = 0xFFFFFFFF.toInt()) },
-    Preset("Sunset") { it.copy(bgType = BgType.GRADIENT, color1 = 0xFFFF5F6D.toInt(), color2 = 0xFFFFA24C.toInt(), opacity = 100, textColor = 0xFFFFFFFF.toInt()) },
-    Preset("Transparan") { it.copy(bgType = BgType.SOLID, color1 = 0xFF000000.toInt(), opacity = 0, dim = 0, textColor = 0xFFFFFFFF.toInt()) },
+    Preset(L.t("Light", "Terang")) { it.copy(bgType = BgType.SOLID, color1 = 0xFFE4E5EA.toInt(), opacity = 90, dim = 0, textColor = 0xFF15171A.toInt()) },
+    Preset(L.t("Dark", "Gelap")) { it.copy(bgType = BgType.SOLID, color1 = 0xFF17171A.toInt(), opacity = 92, dim = 0, textColor = 0xFFFFFFFF.toInt()) },
+    Preset(L.t("Glass", "Kaca")) { it.copy(bgType = BgType.SOLID, color1 = 0xFFFFFFFF.toInt(), opacity = 35, dim = 0, textColor = 0xFFFFFFFF.toInt()) },
+    Preset(L.t("Blue", "Biru")) { it.copy(bgType = BgType.GRADIENT, color1 = 0xFF3D7BFF.toInt(), color2 = 0xFF1B3A8C.toInt(), opacity = 100, textColor = 0xFFFFFFFF.toInt()) },
+    Preset(L.t("Sunset", "Sunset")) { it.copy(bgType = BgType.GRADIENT, color1 = 0xFFFF5F6D.toInt(), color2 = 0xFFFFA24C.toInt(), opacity = 100, textColor = 0xFFFFFFFF.toInt()) },
+    Preset(L.t("Clear", "Transparan")) { it.copy(bgType = BgType.SOLID, color1 = 0xFF000000.toInt(), opacity = 0, dim = 0, textColor = 0xFFFFFFFF.toInt()) },
 )
 
 class WidgetConfigActivity : ComponentActivity() {
@@ -150,8 +151,8 @@ class WidgetConfigActivity : ComponentActivity() {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton({ finish() }) { Ico(R.drawable.ic_back) }
-                Text("Atur widget", Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Button({ save(cfg) }, Modifier.padding(end = 10.dp)) { Text("Simpan") }
+                Text(L.t("Customize widget", "Atur widget"), Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Button({ save(cfg) }, Modifier.padding(end = 10.dp)) { Text(L.t("Save", "Simpan")) }
             }
             // Preview over a fake wallpaper
             Box(
@@ -179,42 +180,42 @@ class WidgetConfigActivity : ComponentActivity() {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SCard {
-                    Label("Gaya cepat")
+                    Label(L.t("Quick styles", "Gaya cepat"))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(Presets) { p -> FilledTonalButton({ cfg = p.apply(cfg) }) { Text(p.name) } }
                     }
                 }
                 SCard {
-                    Label("Periode")
+                    Label(L.t("Period", "Periode"))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(Period.entries.filter { it != Period.CUSTOM }) { p ->
                             FilterChip(cfg.period == p, { cfg = cfg.copy(period = p) }, { Text(p.label) })
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    Label("Jaringan")
+                    Label(L.t("Network", "Jaringan"))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Net.entries.forEach { n -> FilterChip(cfg.net == n, { cfg = cfg.copy(net = n) }, { Text(n.label) }) }
                     }
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         cfg.title, { cfg = cfg.copy(title = it.take(40)) }, Modifier.fillMaxWidth(),
-                        label = { Text("Judul (kosong = otomatis)") }, singleLine = true,
+                        label = { Text(L.t("Title (blank = automatic)", "Judul (kosong = otomatis)")) }, singleLine = true,
                     )
                 }
                 SCard {
-                    Label("Yang ditampilkan")
-                    Toggle("Diagram donat", cfg.showDonut) { cfg = cfg.copy(showDonut = it) }
-                    Toggle("Daftar aplikasi teratas", cfg.showApps) { cfg = cfg.copy(showApps = it) }
-                    if (cfg.showApps) SliderRow("Jumlah aplikasi", cfg.appCount, 1..5) { cfg = cfg.copy(appCount = it) }
-                    Toggle("Rincian Wi-Fi / Data", cfg.showSplit) { cfg = cfg.copy(showSplit = it) }
-                    Toggle("Upload / Download", cfg.showUpDown) { cfg = cfg.copy(showUpDown = it) }
-                    Toggle("Tombol refresh", cfg.showRefresh) { cfg = cfg.copy(showRefresh = it) }
+                    Label(L.t("Show on widget", "Yang ditampilkan"))
+                    Toggle(L.t("Donut chart", "Diagram donat"), cfg.showDonut) { cfg = cfg.copy(showDonut = it) }
+                    Toggle(L.t("Top apps list", "Daftar aplikasi teratas"), cfg.showApps) { cfg = cfg.copy(showApps = it) }
+                    if (cfg.showApps) SliderRow(L.t("Number of apps", "Jumlah aplikasi"), cfg.appCount, 1..5) { cfg = cfg.copy(appCount = it) }
+                    Toggle(L.t("Wi-Fi / mobile breakdown", "Rincian Wi-Fi / Data"), cfg.showSplit) { cfg = cfg.copy(showSplit = it) }
+                    Toggle(L.t("Upload / Download", "Upload / Download"), cfg.showUpDown) { cfg = cfg.copy(showUpDown = it) }
+                    Toggle(L.t("Refresh button", "Tombol refresh"), cfg.showRefresh) { cfg = cfg.copy(showRefresh = it) }
                 }
                 SCard {
-                    Label("Latar belakang")
+                    Label(L.t("Background", "Latar belakang"))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(BgType.SOLID to "Warna", BgType.GRADIENT to "Gradien", BgType.IMAGE to "Gambar").forEach { (t, n) ->
+                        listOf(BgType.SOLID to L.t("Color", "Warna"), BgType.GRADIENT to L.t("Gradient", "Gradien"), BgType.IMAGE to L.t("Image", "Gambar")).forEach { (t, n) ->
                             FilterChip(cfg.bgType == t, {
                                 if (t == BgType.IMAGE && !WidgetPrefs.imageFile(this@WidgetConfigActivity, widgetId).exists())
                                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -223,25 +224,25 @@ class WidgetConfigActivity : ComponentActivity() {
                         }
                     }
                     when (cfg.bgType) {
-                        BgType.SOLID -> ColorPick("Warna", cfg.color1) { cfg = cfg.copy(color1 = it) }
+                        BgType.SOLID -> ColorPick(L.t("Color", "Warna"), cfg.color1) { cfg = cfg.copy(color1 = it) }
                         BgType.GRADIENT -> {
-                            ColorPick("Warna 1", cfg.color1) { cfg = cfg.copy(color1 = it) }
-                            ColorPick("Warna 2", cfg.color2) { cfg = cfg.copy(color2 = it) }
-                            SliderRow("Sudut gradien", cfg.gradientAngle, 0..360, "°") { cfg = cfg.copy(gradientAngle = it) }
+                            ColorPick(L.t("Color 1", "Warna 1"), cfg.color1) { cfg = cfg.copy(color1 = it) }
+                            ColorPick(L.t("Color 2", "Warna 2"), cfg.color2) { cfg = cfg.copy(color2 = it) }
+                            SliderRow(L.t("Gradient angle", "Sudut gradien"), cfg.gradientAngle, 0..360, "°") { cfg = cfg.copy(gradientAngle = it) }
                         }
                         BgType.IMAGE -> {
                             Spacer(Modifier.height(8.dp))
                             FilledTonalButton({ picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                                 Ico(R.drawable.ic_image, size = 18.dp)
-                                Text("  Ganti gambar dari galeri")
+                                Text(L.t("  Pick image from gallery", "  Ganti gambar dari galeri"))
                             }
-                            SliderRow("Gelapkan gambar", cfg.dim, 0..80, "%") { cfg = cfg.copy(dim = it) }
+                            SliderRow(L.t("Darken image", "Gelapkan gambar"), cfg.dim, 0..80, "%") { cfg = cfg.copy(dim = it) }
                         }
                     }
-                    SliderRow("Transparansi (opasitas)", cfg.opacity, 0..100, "%") { cfg = cfg.copy(opacity = it) }
-                    SliderRow("Sudut membulat", cfg.radius, 0..40, "dp") { cfg = cfg.copy(radius = it) }
+                    SliderRow(L.t("Opacity", "Transparansi (opasitas)"), cfg.opacity, 0..100, "%") { cfg = cfg.copy(opacity = it) }
+                    SliderRow(L.t("Corner radius", "Sudut membulat"), cfg.radius, 0..40, "dp") { cfg = cfg.copy(radius = it) }
                 }
-                SCard { ColorPick("Warna teks", cfg.textColor) { cfg = cfg.copy(textColor = it) } }
+                SCard { ColorPick(L.t("Text color", "Warna teks"), cfg.textColor) { cfg = cfg.copy(textColor = it) } }
                 Spacer(Modifier.height(20.dp))
             }
         }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">Pemakaian Data</string>
+    <string name="widget_desc">Wi-Fi &amp; data seluler per aplikasi</string>
+    <string name="widget_sample_title">Pemakaian data hari ini</string>
+    <string name="widget_sample_total">1,2 GB</string>
+    <string name="widget_name_2x1">Pemakaian Data · Mini 2x1</string>
+    <string name="widget_name_2x2">Pemakaian Data · Kotak 2x2</string>
+    <string name="widget_name_4x1">Pemakaian Data · Baris 4x1</string>
+    <string name="widget_desc_2x1">Total, Wi-Fi &amp; seluler</string>
+    <string name="widget_desc_2x2">Total, Wi-Fi &amp; seluler dengan bar rasio</string>
+    <string name="widget_desc_4x1">Total, Wi-Fi &amp; seluler dalam satu baris</string>
+    <string name="refresh">Perbarui</string>
+    <string name="mobile">Seluler</string>
+</resources>

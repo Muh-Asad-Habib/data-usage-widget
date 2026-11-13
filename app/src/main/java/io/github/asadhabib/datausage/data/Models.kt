@@ -1,6 +1,9 @@
 package io.github.asadhabib.datausage.data
 
-enum class Net(val label: String) { ALL("Semua"), WIFI("Wi-Fi"), MOBILE("Data seluler") }
+enum class Net(private val en: String, private val idn: String) {
+    ALL("All", "Semua"), WIFI("Wi-Fi", "Wi-Fi"), MOBILE("Mobile data", "Data seluler");
+    val label get() = L.t(en, idn)
+}
 
 data class Traffic(val rx: Long = 0, val tx: Long = 0) {
     val total get() = rx + tx

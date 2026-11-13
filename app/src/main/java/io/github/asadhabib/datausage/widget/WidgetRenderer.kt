@@ -21,6 +21,7 @@ import android.view.View
 import android.widget.RemoteViews
 import io.github.asadhabib.datausage.R
 import io.github.asadhabib.datausage.data.Fmt
+import io.github.asadhabib.datausage.data.L
 import io.github.asadhabib.datausage.data.Net
 import io.github.asadhabib.datausage.data.Periods
 import io.github.asadhabib.datausage.data.UsageSummary
@@ -128,8 +129,8 @@ object WidgetRenderer {
         val s = data.summary
         if (s == null) {
             v.setTextViewText(R.id.total, "—")
-            v.setTextViewText(R.id.wifi_val, "Beri izin")
-            v.setTextViewText(R.id.cell_val, "di aplikasi")
+            v.setTextViewText(R.id.wifi_val, L.t("Grant access", "Beri izin"))
+            v.setTextViewText(R.id.cell_val, L.t("in the app", "di aplikasi"))
             if (!strip) v.setViewVisibility(R.id.bar, View.GONE)
         } else {
             v.setTextViewText(R.id.total, Fmt.bytes(s.all.total))
@@ -184,7 +185,7 @@ object WidgetRenderer {
         val s = data.summary
         if (s == null) {
             v.setTextViewText(R.id.total, "—")
-            v.setTextViewText(R.id.split, "Buka aplikasi untuk memberi izin akses penggunaan")
+            v.setTextViewText(R.id.split, L.t("Open the app to grant usage access", "Buka aplikasi untuk memberi izin akses penggunaan"))
             v.setViewVisibility(R.id.split, View.VISIBLE)
             v.setViewVisibility(R.id.apps, View.GONE)
             v.setViewVisibility(R.id.donut, View.GONE)

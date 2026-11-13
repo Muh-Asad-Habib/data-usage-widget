@@ -5,20 +5,21 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-enum class Period(val label: String) {
-    TODAY("Hari ini"),
-    YESTERDAY("Kemarin"),
-    LAST_7("7 hari"),
-    THIS_MONTH("Bulan ini"),
-    LAST_MONTH("Bulan lalu"),
-    CUSTOM("Rentang"),
+enum class Period(private val en: String, private val idn: String) {
+    TODAY("Today", "Hari ini"),
+    YESTERDAY("Yesterday", "Kemarin"),
+    LAST_7("Last 7 days", "7 hari"),
+    THIS_MONTH("This month", "Bulan ini"),
+    LAST_MONTH("Last month", "Bulan lalu"),
+    CUSTOM("Custom", "Rentang");
+    val label get() = L.t(en, idn)
 }
 
 data class Range(val start: Long, val end: Long)
 
 object Periods {
     val zone: ZoneId get() = ZoneId.systemDefault()
-    val locale = Locale.forLanguageTag("id-ID")
+    val locale: Locale get() = Locale.getDefault()
 
     fun startOf(d: LocalDate) = d.atStartOfDay(zone).toInstant().toEpochMilli()
 
@@ -40,8 +41,8 @@ object Periods {
         }
     }
 
-    private val dm = DateTimeFormatter.ofPattern("d MMM", locale)
-    private val my = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
+    private val dm get() = DateTimeFormatter.ofPattern("d MMM", locale)
+    private val my get() = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
 
     fun describe(p: Period, r: Range): String {
         val s = java.time.Instant.ofEpochMilli(r.start).atZone(zone).toLocalDate()
