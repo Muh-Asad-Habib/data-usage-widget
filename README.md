@@ -1,13 +1,16 @@
 # Data Watch
 
+<p align="center"><img src="docs/banner.png" alt="Data Watch"></p>
+
 A lightweight Android app and home-screen widget that shows your **Wi-Fi and mobile data usage**: in total, per app and per Wi-Fi network. Handy for keeping an eye on your quota and spotting apps that quietly send data in the background.
 
-**Latest version: v1.2.0** · [Download APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.0/DataWatch-v1.2.0.apk) · [All releases](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
+**Latest version: v1.2.1** · [Download APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.1/DataWatch-v1.2.1.apk) · [All releases](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
 
 ## Screenshots
-| Home | Dashboard | Widget settings |
-|:---:|:---:|:---:|
-| <img src="docs/home.png" width="240"> | <img src="docs/dashboard.png" width="240"> | <img src="docs/widget-settings.png" width="240"> |
+| Home | Apps and networks | Dashboard | Widget settings |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/home.png" width="200"> | <img src="docs/apps.png" width="200"> | <img src="docs/dashboard.png" width="200"> | <img src="docs/widget-settings.png" width="200"> |
+| <img src="docs/home-dark.png" width="200"> | <img src="docs/apps-dark.png" width="200"> | <img src="docs/dashboard-dark.png" width="200"> | <img src="docs/widget-settings-dark.png" width="200"> |
 
 ## Features
 - Home shows today at a glance; tap the total to open the **Dashboard**, swipe through weeks and pick any day, or open last 7 days, this month, last month or any date range with full details
