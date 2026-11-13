@@ -18,7 +18,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -40,11 +42,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,6 +68,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -91,7 +100,7 @@ private const val WHITE = 0xFFFFFFFF.toInt()
 
 private enum class Style(val en: String, val id: String) {
     LIGHT("Light", "Terang"), DARK("Dark", "Gelap"), BLUE("Blue", "Biru"), SUNSET("Sunset", "Senja"),
-    CUSTOM("Custom color", "Warna kustom"), GRADIENT("Custom gradient", "Gradien kustom"), IMAGE("Image", "Gambar");
+    CUSTOM("Color", "Warna"), GRADIENT("Gradient", "Gradien"), IMAGE("Image", "Gambar");
     val label get() = L.t(en, id)
 }
 
@@ -186,13 +195,15 @@ class WidgetConfigActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize().background(cs.background).statusBarsPadding()) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
                 Text(
-                    L.t("Widget settings", "Pengaturan widget"), Modifier.padding(start = 8.dp, top = 20.dp, bottom = 16.dp),
-                    fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
+                    L.t("Widget settings", "Pengaturan widget"), Modifier.padding(start = 10.dp, top = 40.dp, bottom = 22.dp),
+                    fontSize = 30.sp, fontWeight = FontWeight.Bold,
                 )
                 // Live preview over a wallpaper-like backdrop
+                val wall = if (isSystemInDarkTheme()) listOf(Color(0xFF2B3E63), Color(0xFF5A3F5E), Color(0xFF111827))
+                else listOf(Color(0xFF8EB4F0), Color(0xFFF0B8AE), Color(0xFF465C80))
                 Box(
-                    Modifier.fillMaxWidth().height((hDp + 64).coerceIn(150, 290).dp).clip(RoundedCornerShape(26.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF7FA6E8), Color(0xFFE6A6A0), Color(0xFF3A4D6B)))),
+                    Modifier.fillMaxWidth().height((hDp + 72).coerceIn(160, 300).dp).clip(RoundedCornerShape(28.dp))
+                        .background(Brush.linearGradient(wall)),
                     contentAlignment = Alignment.Center,
                 ) {
                     val d = data
@@ -209,13 +220,18 @@ class WidgetConfigActivity : ComponentActivity() {
                         },
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
 
+                Header(L.t("Background", "Latar belakang"))
                 Group {
-                    SwitchRow(L.t("Background", "Latar belakang"), cfg.showBg) { cfg = cfg.copy(showBg = it) }
+                    SwitchRow(L.t("Show background", "Tampilkan latar"), cfg.showBg) { cfg = cfg.copy(showBg = it) }
                     if (cfg.showBg) {
                         Line()
-                        ValueRow(L.t("Color", "Warna"), style.label) { dialog = "style" }
+                        ChipRow(Style.entries.map { s -> ChipSpec(s.label, styleBrush(s), s == style, light = s == Style.LIGHT) }) { i ->
+                            val s = Style.entries[i]
+                            if (s == Style.IMAGE && (style == Style.IMAGE || !WidgetPrefs.imageFile(this@WidgetConfigActivity, widgetId).exists())) pickImage()
+                            else cfg = cfg.withStyle(s)
+                        }
                         when (style) {
                             Style.CUSTOM -> Pad { ColorPick(cfg.color1) { cfg = cfg.copy(color1 = it) } }
                             Style.GRADIENT -> Pad {
@@ -242,18 +258,23 @@ class WidgetConfigActivity : ComponentActivity() {
                         Pad { StepSlider(L.t("Corner radius", "Sudut membulat"), "${cfg.radius} dp", cfg.radius, 0..40, 0) { cfg = cfg.copy(radius = it) } }
                     }
                 }
-                Hint(L.t(
+                if (cfg.showBg) Hint(L.t(
                     "Blur gives the widget a frosted-glass look. Android doesn't let widgets blur the wallpaper behind them.",
                     "Keburaman memberi efek kaca buram. Android tidak mengizinkan widget mengaburkan wallpaper di belakangnya.",
                 ))
 
+                Header(L.t("Text color", "Warna teks"))
                 Group {
-                    val tc = when (cfg.textColor) { DARK_TEXT -> L.t("Dark", "Gelap"); WHITE -> L.t("White", "Putih"); else -> L.t("Custom", "Kustom") }
-                    ValueRow(L.t("Text color", "Warna teks"), tc) { dialog = "text" }
-                    if (cfg.textColor != DARK_TEXT && cfg.textColor != WHITE) Pad { ColorPick(cfg.textColor) { cfg = cfg.copy(textColor = it) } }
+                    val custom = cfg.textColor != DARK_TEXT && cfg.textColor != WHITE
+                    ChipRow(listOf(
+                        ChipSpec(L.t("Dark", "Gelap"), SolidColor(Color(DARK_TEXT)), cfg.textColor == DARK_TEXT),
+                        ChipSpec(L.t("White", "Putih"), SolidColor(Color.White), cfg.textColor == WHITE, light = true),
+                        ChipSpec(L.t("Custom", "Kustom"), if (custom) SolidColor(Color(cfg.textColor)) else Rainbow, custom),
+                    )) { i -> cfg = cfg.copy(textColor = when (i) { 0 -> DARK_TEXT; 1 -> WHITE; else -> if (custom) cfg.textColor else 0xFF3D7BFF.toInt() }) }
+                    if (custom) Pad { ColorPick(cfg.textColor) { cfg = cfg.copy(textColor = it) } }
                 }
-                Spacer(Modifier.height(16.dp))
 
+                Header(L.t("Data", "Data"))
                 Group {
                     ValueRow(L.t("Period", "Periode"), cfg.period.label) { dialog = "period" }
                     Line()
@@ -261,8 +282,7 @@ class WidgetConfigActivity : ComponentActivity() {
                     Line()
                     ValueRow(L.t("Title", "Judul"), cfg.title.ifBlank { L.t("Automatic", "Otomatis") }) { dialog = "title" }
                 }
-                Spacer(Modifier.height(16.dp))
-
+                Header(L.t("Show on widget", "Tampilkan di widget"))
                 Group {
                     SwitchRow(L.t("Donut chart", "Diagram donat"), cfg.showDonut) { cfg = cfg.copy(showDonut = it) }
                     Line()
@@ -282,28 +302,17 @@ class WidgetConfigActivity : ComponentActivity() {
             // One UI floating action pill
             Row(
                 Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 16.dp)
-                    .shadow(10.dp, CircleShape).clip(CircleShape).background(cs.surface).height(56.dp),
+                    .shadow(10.dp, CircleShape).clip(CircleShape)
+                    .background(if (isSystemInDarkTheme()) cs.surfaceVariant else cs.surface).height(56.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                PillButton(L.t("Cancel", "Batal")) { finish() }
+                PillButton(L.t("Cancel", "Batal"), cs.onSurface) { finish() }
                 Box(Modifier.width(1.dp).height(22.dp).background(cs.outlineVariant))
-                PillButton(L.t("Save", "Simpan")) { save(cfg) }
+                PillButton(L.t("Save", "Simpan"), cs.primary) { save(cfg) }
             }
         }
 
         when (dialog) {
-            "style" -> Choice(L.t("Color", "Warna"), Style.entries.map { it.label }, style.ordinal, { dialog = null }) { i ->
-                val s = Style.entries[i]
-                if (s == Style.IMAGE && !WidgetPrefs.imageFile(this, widgetId).exists()) pickImage()
-                else cfg = cfg.withStyle(s)
-            }
-            "text" -> {
-                val opts = listOf(DARK_TEXT, WHITE, null)
-                val cur = opts.indexOf(cfg.textColor).let { if (it < 0) 2 else it }
-                Choice(L.t("Text color", "Warna teks"), listOf(L.t("Dark", "Gelap"), L.t("White", "Putih"), L.t("Custom", "Kustom")), cur, { dialog = null }) { i ->
-                    cfg = cfg.copy(textColor = opts[i] ?: if (cur == 2) cfg.textColor else 0xFF3D7BFF.toInt())
-                }
-            }
             "period" -> {
                 val ps = Period.entries.filter { it != Period.CUSTOM }
                 Choice(L.t("Period", "Periode"), ps.map { it.label }, ps.indexOf(cfg.period), { dialog = null }) { cfg = cfg.copy(period = ps[it]) }
@@ -364,10 +373,72 @@ private fun ValueRow(label: String, value: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PillButton(label: String, onClick: () -> Unit) =
-    Box(Modifier.fillMaxHeight().clickable(onClick = onClick).padding(horizontal = 36.dp), contentAlignment = Alignment.Center) {
-        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+private fun PillButton(label: String, color: Color, onClick: () -> Unit) =
+    Box(Modifier.fillMaxHeight().clickable(onClick = onClick).padding(horizontal = 40.dp), contentAlignment = Alignment.Center) {
+        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = color)
     }
+
+@Composable
+private fun Header(t: String) =
+    Text(t, Modifier.padding(start = 22.dp, top = 18.dp, bottom = 8.dp), fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+private val Rainbow = Brush.sweepGradient(listOf(
+    Color(0xFFFF5F6D), Color(0xFFFFD166), Color(0xFF5BD37F), Color(0xFF3BBFDB), Color(0xFF3D7BFF), Color(0xFFA06BFF), Color(0xFFFF5F6D),
+))
+
+private fun styleBrush(s: Style): Brush = when (s) {
+    Style.LIGHT -> SolidColor(Color(0xFFE4E5EA))
+    Style.DARK -> SolidColor(Color(0xFF17171A))
+    Style.BLUE -> Brush.linearGradient(listOf(Color(0xFF3D7BFF), Color(0xFF1B3A8C)))
+    Style.SUNSET -> Brush.linearGradient(listOf(Color(0xFFFF5F6D), Color(0xFFFFA24C)))
+    Style.CUSTOM -> Rainbow
+    Style.GRADIENT -> Brush.linearGradient(listOf(Color(0xFFA06BFF), Color(0xFF3BBFDB)))
+    Style.IMAGE -> Brush.verticalGradient(listOf(Color(0xFF8EB4F0), Color(0xFFF0B8AE)))
+}
+
+private class ChipSpec(val label: String, val brush: Brush, val selected: Boolean, val light: Boolean = false)
+
+/** One UI style row of round swatches with a label under each. */
+@Composable
+private fun ChipRow(chips: List<ChipSpec>, onPick: (Int) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    LazyRow(
+        Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        items(chips.size) { i ->
+            val c = chips[i]
+            Column(
+                Modifier.width(68.dp).clip(RoundedCornerShape(16.dp))
+                    .clickable(role = Role.RadioButton) { onPick(i) }.padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    Modifier.size(50.dp).border(2.dp, if (c.selected) cs.primary else Color.Transparent, CircleShape).padding(5.dp)
+                        .clip(CircleShape).background(c.brush).border(1.dp, cs.onSurface.copy(alpha = .22f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (c.selected) Canvas(Modifier.size(16.dp)) {
+                        val p = Path().apply {
+                            moveTo(size.width * .12f, size.height * .52f)
+                            lineTo(size.width * .40f, size.height * .80f)
+                            lineTo(size.width * .90f, size.height * .22f)
+                        }
+                        drawPath(p, if (c.light) Color(0xFF15171A) else Color.White,
+                            style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    }
+                }
+                Text(
+                    c.label, Modifier.padding(top = 6.dp), fontSize = 12.sp, maxLines = 1,
+                    color = if (c.selected) cs.primary else cs.onSurfaceVariant,
+                    fontWeight = if (c.selected) FontWeight.SemiBold else FontWeight.Normal,
+                )
+            }
+        }
+    }
+}
 
 private fun Modifier.fillMaxHeight() = this.then(Modifier.heightIn(min = 56.dp))
 
@@ -380,6 +451,7 @@ private fun Checker() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StepSlider(label: String, value: String, v: Int, range: IntRange, steps: Int, checker: Boolean = false, on: (Int) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -391,6 +463,20 @@ private fun StepSlider(label: String, value: String, v: Int, range: IntRange, st
         Slider(
             v.toFloat(), { on(it.roundToInt()) }, Modifier.weight(1f),
             valueRange = range.first.toFloat()..range.last.toFloat(), steps = steps,
+            thumb = {
+                Box(Modifier.size(24.dp).shadow(3.dp, CircleShape).background(Color.White, CircleShape)
+                    .border(1.dp, Color(0x14000000), CircleShape))
+            },
+            track = { st ->
+                SliderDefaults.Track(
+                    st, Modifier.height(6.dp), drawStopIndicator = null, thumbTrackGapSize = 0.dp,
+                    colors = SliderDefaults.colors(
+                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = .12f),
+                        activeTickColor = Color.White.copy(alpha = .7f),
+                        inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = .3f),
+                    ),
+                )
+            },
         )
     }
 }
