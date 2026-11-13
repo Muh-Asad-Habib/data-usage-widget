@@ -25,14 +25,15 @@ object WifiLog {
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences("wifi_log", Context.MODE_PRIVATE)
 
-    fun hasLocation(ctx: Context) =
+    fun hasLocation(ctx: Context) = Demo.on(ctx) ||
         ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    fun hasBackground(ctx: Context) =
+    fun hasBackground(ctx: Context) = Demo.on(ctx) ||
         ctx.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     @Suppress("DEPRECATION")
     fun locationOn(ctx: Context): Boolean {
+        if (Demo.on(ctx)) return true
         val lm = ctx.getSystemService(LocationManager::class.java) ?: return false
         return if (Build.VERSION.SDK_INT >= 28) lm.isLocationEnabled
         else lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) || lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
@@ -67,10 +68,11 @@ object WifiLog {
             if (i <= 0) null else l.substring(0, i).toLongOrNull()?.let { it to l.substring(i + 1) }
         }
 
-    fun since(ctx: Context): Long? = entries(ctx).firstOrNull()?.first
+    fun since(ctx: Context): Long? = if (Demo.on(ctx)) Demo.since() else entries(ctx).firstOrNull()?.first
 
     /** Wi-Fi usage per SSID in [r]. A null SSID means traffic from before logging started. */
     fun usage(ctx: Context, repo: UsageRepository, r: Range): List<SsidUsage> {
+        if (Demo.on(ctx)) return Demo.ssids(r)
         val e = entries(ctx)
         val map = LinkedHashMap<String?, Long>()
         val first = e.firstOrNull()?.first ?: r.end

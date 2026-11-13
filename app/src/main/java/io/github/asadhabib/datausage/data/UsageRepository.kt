@@ -23,7 +23,9 @@ class UsageRepository(context: Context) {
 
     private fun sub(type: Int) = if (type == ConnectivityManager.TYPE_MOBILE) subscriber else null
 
-    fun device(type: Int, start: Long, end: Long): Traffic = try {
+    private val demo = Demo.on(ctx)
+
+    fun device(type: Int, start: Long, end: Long): Traffic = if (demo) Demo.traffic(type, start, end) else try {
         val b = nsm.querySummaryForDevice(type, sub(type), start, end)
         Traffic(b.rxBytes, b.txBytes)
     } catch (_: Exception) { Traffic() }
@@ -33,6 +35,7 @@ class UsageRepository(context: Context) {
 
     fun summary(r: Range): UsageSummary {
         if (r.end <= r.start) return UsageSummary.EMPTY
+        if (demo) return Demo.summary(r)
         data class Acc(var wifi: Traffic = Traffic(), var mobile: Traffic = Traffic(), var fg: Traffic = Traffic(), var bg: Traffic = Traffic())
         val map = HashMap<Int, Acc>()
         for (type in types) {
@@ -66,14 +69,15 @@ class UsageRepository(context: Context) {
     fun daily(days: Int, uid: Int? = null, endDay: LocalDate = LocalDate.now(Periods.zone)): List<DayUsage> {
         val first = endDay.minusDays((days - 1).toLong())
         val starts = (0..days).map { Periods.startOf(first.plusDays(it.toLong())) }
-        if (uid == null) {
-            return (0 until days).map { i ->
+        if (uid == null || demo) {
+            val all = (0 until days).map { i ->
                 DayUsage(
                     starts[i],
                     device(ConnectivityManager.TYPE_WIFI, starts[i], starts[i + 1]).total,
                     device(ConnectivityManager.TYPE_MOBILE, starts[i], starts[i + 1]).total,
                 )
             }
+            return if (uid == null) all else Demo.dailyFor(uid, all)
         }
         val wifi = LongArray(days)
         val mobile = LongArray(days)

@@ -17,3 +17,6 @@ keystore.properties
 
 # Local-only Indonesian README
 README.id.md
+
+# Third-party app icons used only for demo screenshots
+app/src/debug/assets/demo_icons/

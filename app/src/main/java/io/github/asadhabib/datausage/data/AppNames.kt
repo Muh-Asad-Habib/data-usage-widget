@@ -52,5 +52,5 @@ object AppNames {
 
     fun icon(ctx: Context, pkg: String?): Drawable? = try {
         if (pkg == null) null else ctx.packageManager.getApplicationIcon(pkg)
-    } catch (_: Exception) { null }
+    } catch (_: Exception) { if (Demo.on(ctx)) Demo.icon(ctx, pkg) else null }
 }
