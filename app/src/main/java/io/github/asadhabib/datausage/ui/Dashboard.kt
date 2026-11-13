@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -192,7 +193,7 @@ private fun DateStrip(day: LocalDate, onPick: (LocalDate) -> Unit) {
                             .padding(vertical = 8.dp).alpha(if (future) .35f else 1f),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(d.dayOfWeek.getDisplayName(TextStyle.NARROW, Periods.locale), fontSize = 11.sp, color = cs.onSurfaceVariant)
+                        Text(d.dayOfWeek.getDisplayName(TextStyle.SHORT, Periods.locale), fontSize = 11.sp, color = cs.onSurfaceVariant, maxLines = 1)
                         Text("${d.dayOfMonth}", fontSize = 17.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
                     }
                 }
@@ -264,10 +265,11 @@ private fun StackedWeek(days: List<UsageSummary>, net: Net, uids: List<Int>, idx
             val sel = i == idx
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Box(
-                    Modifier.size(26.dp).clip(CircleShape).background(if (sel) cs.onSurface else Color.Transparent).clickable(enabled = i <= last) { onDay(i) }.alpha(if (i > last) .35f else 1f),
+                    Modifier.height(26.dp).widthIn(min = 26.dp).clip(RoundedCornerShape(50)).background(if (sel) cs.onSurface else Color.Transparent)
+                        .clickable(enabled = i <= last) { onDay(i) }.alpha(if (i > last) .35f else 1f).padding(horizontal = 6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(DayOfWeek.of(i + 1).getDisplayName(TextStyle.NARROW, Periods.locale), fontSize = 12.sp,
+                    Text(DayOfWeek.of(i + 1).getDisplayName(TextStyle.SHORT, Periods.locale), fontSize = 11.sp, maxLines = 1,
                         color = if (sel) cs.surface else cs.onSurfaceVariant, fontWeight = FontWeight.Medium)
                 }
             }

@@ -13,6 +13,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -110,31 +113,37 @@ internal fun Page(
     actions: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
-    LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        // One UI style: large centred title with room above, toolbar row underneath.
-        item {
-            Column(
-                Modifier.fillMaxWidth().height(if (onBack == null) 210.dp else 170.dp).padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(title, fontSize = 32.sp, fontWeight = FontWeight.Normal, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (subtitle != null) Text(subtitle, Modifier.padding(top = 6.dp), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-            }
+    val list = rememberLazyListState()
+    val collapsed by remember { derivedStateOf { list.firstVisibleItemIndex > 0 || list.firstVisibleItemScrollOffset > 120 } }
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        // One UI style: fixed toolbar; the small title fades in once the large title scrolls away.
+        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (onBack != null) RoundButton(R.drawable.ic_back, L.t("Back", "Kembali"), onBack) else Spacer(Modifier.width(12.dp))
+            Text(
+                title, Modifier.weight(1f).padding(horizontal = 4.dp).alpha(if (collapsed) 1f else 0f),
+                fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Row(content = actions)
         }
-        item {
-            Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (onBack != null) RoundButton(R.drawable.ic_back, L.t("Back", "Kembali"), onBack)
-                Spacer(Modifier.weight(1f))
-                Row(content = actions)
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = list,
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Column(
+                    Modifier.fillMaxWidth().height(if (onBack == null) 170.dp else 130.dp).padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(title, fontSize = 32.sp, fontWeight = FontWeight.Normal, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                    if (subtitle != null) Text(subtitle, Modifier.padding(top = 6.dp), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
             }
+            content()
+            item { Spacer(Modifier.navigationBarsPadding()) }
         }
-        content()
-        item { Spacer(Modifier.navigationBarsPadding()) }
     }
 }
 
