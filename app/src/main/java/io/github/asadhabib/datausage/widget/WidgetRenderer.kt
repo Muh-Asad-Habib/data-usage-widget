@@ -104,7 +104,8 @@ object WidgetRenderer {
             }
 
             if (cfg.showDonut && wDp >= 200) {
-                val size = ((hDp - 24).coerceIn(60, 150) * density).toInt()
+                val dp = minOf(hDp - 40, (wDp * 0.34f).toInt(), 120).coerceAtLeast(56)
+                val size = (dp * density).toInt()
                 val k = cfg.appCount.coerceIn(1, 5)
                 val values = apps.take(k).map { it.of(net).total }
                 v.setImageViewBitmap(R.id.donut, donut(size, values, t.total, cfg.textColor))

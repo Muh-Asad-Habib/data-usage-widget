@@ -57,7 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -302,5 +301,3 @@ private fun ColorPick(label: String, color: Int, on: (Int) -> Unit) {
     }
 }
 
-@Suppress("unused")
-private fun Color.argb() = toArgb()
