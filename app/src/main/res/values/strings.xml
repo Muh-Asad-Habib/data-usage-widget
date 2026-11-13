@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pantau Data</string>
+    <string name="widget_name">Pemakaian Data</string>
+    <string name="widget_desc">WiFi &amp; data seluler per aplikasi</string>
+    <string name="widget_sample_title">Pemakaian data hari ini</string>
+    <string name="widget_sample_total">1,2 GB</string>
+    <string name="refresh">Perbarui</string>
+</resources>
