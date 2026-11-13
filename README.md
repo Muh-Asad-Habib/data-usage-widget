@@ -2,7 +2,7 @@
 
 A lightweight Android app and home-screen widget that shows your **Wi-Fi and mobile data usage**: in total, per app and per Wi-Fi network. Handy for keeping an eye on your quota and spotting apps that quietly send data in the background.
 
-**[Download the latest APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/latest)**
+**Latest version: v1.2.0** · [Download APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.0/DataWatch-v1.2.0.apk) · [All releases](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
 
 ## Features
 - Home shows today at a glance; tap the total to open the **Dashboard**, swipe through weeks and pick any day, or open last 7 days, this month, last month or any date range with full details
