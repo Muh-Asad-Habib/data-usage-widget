@@ -9,7 +9,7 @@ A lightweight Android app and home-screen widget that shows your **Wi-Fi and mob
 - Weekly stacked charts for total, Wi-Fi and mobile data, with top apps per day
 - Per-app usage (foreground vs. background) and usage per Wi-Fi network (SSID)
 - Highlights apps with heavy background uploads, which can help detect spyware
-- Widgets in 2x1, 2x2, 4x1 and 4x2, with custom period, network, colors, gradient, image, transparency and content
+- Widgets in 2x1, 2x2, 4x1 and 4x2, with custom period, network, colors, gradient, image, transparency, frosted blur and content, set from a One UI style settings screen
 - Clean One UI-style design, light and dark theme
 - English by default, follows the system language (Indonesian included)
 - Private: no internet permission, nothing leaves your phone
