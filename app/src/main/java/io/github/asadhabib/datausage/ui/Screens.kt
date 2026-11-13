@@ -1,6 +1,24 @@
 package io.github.asadhabib.datausage.ui
 
 import android.appwidget.AppWidgetManager
+import android.Manifest
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import io.github.asadhabib.datausage.data.WifiLog
+import kotlin.math.roundToInt
 import android.content.ComponentName
 import android.content.Intent
 import androidx.compose.foundation.Canvas
@@ -79,8 +97,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 
-private val WifiColor = ChartColors[0]
-private val MobileColor = ChartColors[1]
 private val dayFmt = DateTimeFormatter.ofPattern("EEE", Periods.locale)
 private val dmFmt = DateTimeFormatter.ofPattern("d MMM", Periods.locale)
 
@@ -88,20 +104,23 @@ private val dmFmt = DateTimeFormatter.ofPattern("d MMM", Periods.locale)
 private fun Page(
     title: String,
     onBack: (() -> Unit)? = null,
+    subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (onBack != null) IconButton(onBack) { Ico(R.drawable.ic_back) } else Spacer(Modifier.width(10.dp))
-                Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                actions()
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp).height(64.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (onBack != null) RoundButton(R.drawable.ic_back, "Kembali", onBack) else Spacer(Modifier.width(4.dp))
+                Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                    Text(title, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (subtitle != null) Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
             }
         }
         content()
@@ -109,15 +128,38 @@ private fun Page(
     }
 }
 
+@Composable
+private fun RoundButton(icon: Int, desc: String, onClick: () -> Unit, spin: Boolean = false) {
+    val angle = if (spin) {
+        val t = rememberInfiniteTransition(label = "spin")
+        t.animateFloat(0f, 360f, infiniteRepeatable(tween(800, easing = LinearEasing)), label = "a").value
+    } else 0f
+    Box(
+        Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            .semantics { contentDescription = desc }
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Box(Modifier.rotate(angle)) { Ico(icon, size = 20.dp) } }
+}
+
+private val timeFmt = DateTimeFormatter.ofPattern("HH:mm", Periods.locale)
+
 private fun day(ms: Long) = Instant.ofEpochMilli(ms).atZone(Periods.zone).toLocalDate()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(vm: MainViewModel) {
     var picker by remember { mutableStateOf(false) }
-    Page("Pantau Data", actions = {
-        IconButton({ vm.open(Screen.Report) }) { Ico(R.drawable.ic_chart) }
-        IconButton({ vm.open(Screen.Widgets) }) { Ico(R.drawable.ic_widgets) }
+    val sub = when {
+        vm.loading -> "Memperbarui…"
+        vm.updatedAt > 0 -> "Diperbarui " + Instant.ofEpochMilli(vm.updatedAt).atZone(Periods.zone).format(timeFmt)
+        else -> null
+    }
+    Page("Pantau Data", subtitle = sub, actions = {
+        RoundButton(R.drawable.ic_refresh, "Muat ulang", { if (!vm.loading) vm.refresh() }, spin = vm.loading)
+        RoundButton(R.drawable.ic_chart, "Laporan", { vm.open(Screen.Report) })
+        RoundButton(R.drawable.ic_widgets, "Widget", { vm.open(Screen.Widgets) })
     }) {
         if (!vm.granted) {
             item { PermissionCard() }
@@ -129,16 +171,24 @@ fun HomeScreen(vm: MainViewModel) {
                     FilterChip(
                         selected = vm.period == p,
                         onClick = { if (p == Period.CUSTOM) picker = true else vm.select(p) },
-                        label = { Text(p.label) },
+                        label = { Text(p.label, Modifier.padding(vertical = 8.dp)) },
                         leadingIcon = if (p == Period.CUSTOM) ({ Ico(R.drawable.ic_calendar, size = 16.dp) }) else null,
                         shape = RoundedCornerShape(50),
-                        colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surface),
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(true, vm.period == p,
+                            borderColor = MaterialTheme.colorScheme.outline, selectedBorderColor = Color.Transparent),
                     )
                 }
             }
         }
         item { HeroCard(Periods.describe(vm.period, vm.range), vm.summary, vm.net, vm.loading) }
         item { Tiles(vm.summary, vm.net) }
+        if (vm.net != Net.MOBILE) item { SsidCard(vm) }
         item { NetSelector(vm.net) { vm.net = it } }
         appList(vm.summary, vm.net) { vm.open(Screen.Detail(it)) }
         item { BackgroundWatch(vm.summary) { vm.open(Screen.Detail(it)) } }
@@ -187,28 +237,35 @@ private fun PermissionCard() {
 private fun HeroCard(label: String, s: UsageSummary, net: Net, loading: Boolean) {
     val total = s.of(net).total
     val apps = s.appsBy(net)
-    SCard {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp)
+    HeroSurface {
+        Text(label.uppercase(Periods.locale), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp,
+            fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(Fmt.bytes(total), fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(10.dp))
-                apps.take(3).forEachIndexed { i, a -> Legend(ChartColors[i], a.label, Fmt.bytes(a.of(net).total)) }
-                val rest = total - apps.take(3).sumOf { it.of(net).total }
-                if (apps.size > 3 && rest > 0) Legend(OtherColor, "Lainnya", Fmt.bytes(rest))
+                Text(Fmt.bytes(total), fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 42.sp)
+                Text("Total ${net.label.lowercase(Periods.locale)}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(Modifier.width(14.dp))
-            Donut(apps.take(3).map { it.of(net).total }, total, Modifier.size(120.dp))
+            Spacer(Modifier.width(12.dp))
+            Box(contentAlignment = Alignment.Center) {
+                Donut(apps.take(3).map { it.of(net).total }, total, Modifier.size(104.dp), stroke = 14.dp)
+                Text("${apps.size}\napl", fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+            }
         }
-        if (loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 10.dp))
+        Spacer(Modifier.height(14.dp))
+        apps.take(3).forEachIndexed { i, a -> Legend(ChartColors[i], a.label, Fmt.bytes(a.of(net).total)) }
+        val rest = total - apps.take(3).sumOf { it.of(net).total }
+        if (apps.size > 3 && rest > 0) Legend(OtherColor, "Lainnya", Fmt.bytes(rest))
+        if (loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(2.dp)))
     }
 }
 
 @Composable
 private fun Legend(c: Color, name: String, value: String) {
-    Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(4.dp, 15.dp).clip(RoundedCornerShape(2.dp)).background(c))
-        Text(name, Modifier.weight(1f).padding(start = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
+    Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(c))
+        Text(name, Modifier.weight(1f).padding(start = 10.dp), maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
         Text(value, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
     }
 }
@@ -216,29 +273,108 @@ private fun Legend(c: Color, name: String, value: String) {
 @Composable
 private fun Tiles(s: UsageSummary, net: Net) {
     val t = s.of(net)
+    val all = (s.wifi.total + s.mobile.total).coerceAtLeast(1)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Tile(R.drawable.ic_wifi, WifiColor, "Wi-Fi", Fmt.bytes(s.wifi.total))
-            Tile(R.drawable.ic_cell, MobileColor, "Data seluler", Fmt.bytes(s.mobile.total))
+            Tile(R.drawable.ic_wifi, WifiColor, "Wi-Fi", Fmt.bytes(s.wifi.total), s.wifi.total.toFloat() / all)
+            Tile(R.drawable.ic_cell, MobileColor, "Data seluler", Fmt.bytes(s.mobile.total), s.mobile.total.toFloat() / all)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Tile(R.drawable.ic_up, ChartColors[3], "Upload", Fmt.bytes(t.tx))
-            Tile(R.drawable.ic_down, ChartColors[2], "Download", Fmt.bytes(t.rx))
+            Tile(R.drawable.ic_down, ChartColors[1], "Download", Fmt.bytes(t.rx), null)
+            Tile(R.drawable.ic_up, ChartColors[3], "Upload", Fmt.bytes(t.tx), null)
         }
     }
 }
 
 @Composable
-private fun RowScope.Tile(icon: Int, c: Color, label: String, value: String) {
+private fun RowScope.Tile(icon: Int, c: Color, label: String, value: String, share: Float? = null) {
+    val shape = RoundedCornerShape(22.dp)
     Column(
-        Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surface).padding(16.dp),
+        Modifier.weight(1f).clip(shape).background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f), shape).padding(16.dp),
     ) {
-        Box(Modifier.size(34.dp).clip(CircleShape).background(c.copy(alpha = .15f)), contentAlignment = Alignment.Center) {
-            Ico(icon, c, 18.dp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(c.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
+                Ico(icon, c, 18.dp)
+            }
+            Spacer(Modifier.weight(1f))
+            if (share != null) Text("${(share * 100).roundToInt()}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = c)
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 20.sp)
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+        if (share != null) { Spacer(Modifier.height(8.dp)); Bar(share, c, 4.dp) }
+    }
+}
+
+@Composable
+private fun SsidCard(vm: MainViewModel) {
+    val ctx = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refresh() }
+    val bgLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
+    SCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(WifiColor.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
+                Ico(R.drawable.ic_wifi, WifiColor, 18.dp)
+            }
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text("Wi-Fi per jaringan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Berdasarkan nama Wi-Fi (SSID)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        when {
+            !vm.location -> {
+                Text(
+                    "Android hanya memberi nama Wi-Fi jika izin lokasi aktif. Lokasi tidak dipakai untuk hal lain dan tidak ada data yang keluar dari HP.",
+                    fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                Button({
+                    launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                }, Modifier.fillMaxWidth().height(48.dp)) { Text("Izinkan lokasi") }
+            }
+            else -> {
+                if (!vm.locationOn) Hint("Lokasi HP sedang mati, nama Wi-Fi baru tidak bisa dicatat.") {
+                    try { ctx.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) } catch (_: Exception) {}
+                }
+                if (Build.VERSION.SDK_INT >= 29 && !WifiLog.hasBackground(ctx)) Hint("Izinkan lokasi \"Sepanjang waktu\" agar perpindahan Wi-Fi tercatat walau aplikasi tertutup.") {
+                    bgLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                }
+                val list = vm.ssids
+                val max = list.maxOfOrNull { it.bytes }?.coerceAtLeast(1) ?: 1
+                if (list.isEmpty()) Text("Belum ada catatan Wi-Fi di periode ini.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                list.take(8).forEach { u ->
+                    Column(Modifier.padding(vertical = 6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(u.ssid ?: "Belum tercatat", Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (u.ssid != null) FontWeight.Medium else FontWeight.Normal,
+                                color = if (u.ssid != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(Fmt.bytes(u.bytes), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Bar(u.bytes.toFloat() / max, if (u.ssid != null) WifiColor else OtherColor, 4.dp)
+                    }
+                }
+                WifiLog.since(ctx)?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text("Tercatat sejak " + Instant.ofEpochMilli(it).atZone(Periods.zone).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Periods.locale)),
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Hint(text: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(14.dp))
+            .background(ChartColors[3].copy(alpha = .12f)).clickable(onClick = onClick).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text, Modifier.weight(1f), fontSize = 13.sp)
+        Ico(R.drawable.ic_chevron, ChartColors[3], 18.dp)
     }
 }
 
@@ -250,11 +386,14 @@ private fun NetSelector(net: Net, onChange: (Net) -> Unit) {
         Net.entries.forEach { n ->
             val sel = n == net
             Box(
-                Modifier.weight(1f).clip(RoundedCornerShape(50))
+                Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50))
                     .background(if (sel) MaterialTheme.colorScheme.surface else Color.Transparent)
-                    .clickable { onChange(n) }.padding(vertical = 10.dp),
+                    .clickable { onChange(n) },
                 contentAlignment = Alignment.Center,
-            ) { Text(n.label, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, fontSize = 14.sp) }
+            ) {
+                Text(n.label, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, fontSize = 14.sp,
+                    color = if (sel) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -274,6 +413,7 @@ private fun AppRow(a: AppUsage, net: Net, max: Long, onClick: (AppUsage) -> Unit
     val v = a.of(net)
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f), RoundedCornerShape(20.dp))
             .clickable { onClick(a) }.padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -295,9 +435,9 @@ private fun AppRow(a: AppUsage, net: Net, max: Long, onClick: (AppUsage) -> Unit
 }
 
 @Composable
-private fun Bar(f: Float, c: Color = Accent) {
-    Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-        Box(Modifier.fillMaxWidth(f.coerceIn(0.02f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(c))
+private fun Bar(f: Float, c: Color = Accent, h: Dp = 6.dp) {
+    Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+        Box(Modifier.fillMaxWidth(f.coerceIn(0.02f, 1f)).height(h).clip(RoundedCornerShape(50)).background(c))
     }
 }
 

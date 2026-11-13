@@ -4,10 +4,12 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -36,36 +39,59 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import io.github.asadhabib.datausage.data.AppNames
+import io.github.asadhabib.datausage.widget.WidgetRenderer.CELL_COLOR
 import io.github.asadhabib.datausage.widget.CHART_COLORS
 import io.github.asadhabib.datausage.widget.OTHER_COLOR
+import io.github.asadhabib.datausage.widget.WidgetRenderer.WIFI_COLOR
 
 val ChartColors = CHART_COLORS.map { Color(it) }
 val OtherColor = Color(OTHER_COLOR)
 val Accent = Color(0xFF3D7BFF)
+val WifiColor = Color(WIFI_COLOR)
+val MobileColor = Color(CELL_COLOR)
 
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val scheme = if (dark) darkColorScheme(
-        primary = Color(0xFF7FA6FF), background = Color(0xFF000000), surface = Color(0xFF17171A),
-        surfaceVariant = Color(0xFF252529), onSurface = Color(0xFFF2F2F4), onSurfaceVariant = Color(0xFFA0A0A8),
-        secondaryContainer = Color(0xFF2A3550),
+        primary = Color(0xFF7DA4FF), onPrimary = Color(0xFF0A1A3F), background = Color(0xFF0A0C11),
+        surface = Color(0xFF14171E), surfaceVariant = Color(0xFF1F232C), onSurface = Color(0xFFF1F3F7),
+        onSurfaceVariant = Color(0xFF9AA1AE), secondaryContainer = Color(0xFF233056), outline = Color(0xFF2A2F3A),
+        primaryContainer = Color(0xFF1B2A55),
     ) else lightColorScheme(
-        primary = Accent, background = Color(0xFFF2F2F4), surface = Color.White,
-        surfaceVariant = Color(0xFFEDEDF0), onSurface = Color(0xFF15171A), onSurfaceVariant = Color(0xFF70737A),
-        secondaryContainer = Color(0xFFDCE6FF),
+        primary = Accent, background = Color(0xFFF3F5F9), surface = Color.White,
+        surfaceVariant = Color(0xFFEBEEF3), onSurface = Color(0xFF12151B), onSurfaceVariant = Color(0xFF656B78),
+        secondaryContainer = Color(0xFFDCE6FF), outline = Color(0xFFE3E6EC), primaryContainer = Color(0xFFE3EBFF),
     )
     MaterialTheme(colorScheme = scheme, content = content)
 }
 
 @Composable
 fun SCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f), shape)
             .padding(20.dp),
+        content = content,
+    )
+}
+
+/** Card with a soft accent gradient, used for the main number on a screen. */
+@Composable
+fun HeroSurface(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(28.dp)
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(cs.primaryContainer, cs.surface)))
+            .border(1.dp, cs.primary.copy(alpha = .18f), shape)
+            .padding(22.dp),
         content = content,
     )
 }
@@ -75,10 +101,13 @@ fun Ico(res: Int, tint: Color = MaterialTheme.colorScheme.onSurface, size: Dp = 
     Icon(painterResource(res), null, Modifier.size(size), tint = tint)
 
 @Composable
-fun SectionTitle(text: String) = Text(
-    text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
-)
+fun SectionTitle(text: String, trailing: String? = null) = Row(
+    Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 2.dp),
+    verticalAlignment = Alignment.CenterVertically,
+) {
+    Text(text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    if (trailing != null) Text(trailing, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
 
 @Composable
 fun Donut(values: List<Long>, total: Long, modifier: Modifier = Modifier, stroke: Dp = 18.dp) {
