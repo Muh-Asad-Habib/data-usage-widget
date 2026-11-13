@@ -167,7 +167,7 @@ fun HomeScreen(vm: MainViewModel) {
         vm.updatedAt > 0 -> L.t("Updated ", "Diperbarui ") + Instant.ofEpochMilli(vm.updatedAt).atZone(Periods.zone).format(timeFmt)
         else -> null
     }
-    Page("Pantau Data", subtitle = sub, actions = {
+    Page("Data Watch", subtitle = sub, actions = {
         RoundButton(R.drawable.ic_refresh, L.t("Refresh", "Muat ulang"), { if (!vm.loading) vm.refresh() }, spin = vm.loading)
         RoundButton(R.drawable.ic_chart, L.t("Report", "Laporan"), { vm.open(Screen.Report) })
         RoundButton(R.drawable.ic_widgets, "Widget", { vm.open(Screen.Widgets) })

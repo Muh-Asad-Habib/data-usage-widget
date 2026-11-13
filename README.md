@@ -1,4 +1,4 @@
-# Pantau Data
+# Data Watch
 
 A lightweight Android app and home-screen widget that shows your **Wi-Fi and mobile data usage**: in total, per app and per Wi-Fi network. Handy for keeping an eye on your quota and spotting apps that quietly send data in the background.
 
@@ -22,7 +22,7 @@ A lightweight Android app and home-screen widget that shows your **Wi-Fi and mob
 ## Install
 1. Download and install the APK (allow "Install unknown apps").
 2. Open the app and grant **Usage access**.
-3. Long-press the home screen, open Widgets and add **Pantau Data**.
+3. Long-press the home screen, open Widgets and add **Data Watch**.
 
 ## About the icon
 An eye made of two arcs, one for Wi-Fi and one for mobile data, with a keyhole in the middle: you watch your own data, and only you hold the key.

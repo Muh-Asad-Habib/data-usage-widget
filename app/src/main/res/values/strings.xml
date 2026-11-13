@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Pantau Data</string>
+    <string name="app_name">Data Watch</string>
     <string name="widget_name">Data Usage</string>
     <string name="widget_desc">Wi-Fi &amp; mobile data per app</string>
     <string name="widget_sample_title">Data used today</string>
