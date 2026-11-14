@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="Data Watch: Wi-Fi and mobile data usage per app and per network">
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.png"><img src="docs/banner-light.png" alt="Data Watch: Wi-Fi and mobile data usage per app and per network"></picture>
 
 # Data Watch
 
@@ -13,7 +13,7 @@
 ![No internet](https://img.shields.io/badge/permission-no%20internet-111827?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6B7280?style=flat-square)](LICENSE)
 
-<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.1/DataWatch-v1.2.1.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.1%20%C2%B7%201.4%20MB-2F6BFF?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
+<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.2/DataWatch-v1.2.2.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.2%20%C2%B7%201.3%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
 
 </div>
 
@@ -103,7 +103,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 ## Install
 
-1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.1/DataWatch-v1.2.1.apk) and open it (allow "Install unknown apps").
+1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.2/DataWatch-v1.2.2.apk) and open it (allow "Install unknown apps").
 2. Open **Data Watch** and grant **Usage access**.
 3. Optional: allow **Location** to show Wi-Fi names (Android needs it to read the SSID).
 4. Long-press your home screen, tap **Widgets** and add **Data Watch**.
