@@ -19,6 +19,15 @@
 
 ---
 
+## What's new in v1.2.4
+
+- **Clear Wi-Fi history** button; Wi-Fi names are wiped automatically if you revoke Location
+- App data is excluded from cloud backup and phone-to-phone transfer
+- Safer widget settings and custom image import (no crash on huge images)
+- Verified build: Gradle and dependency checksums are pinned
+
+[Full changelog](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
+
 ## Why Data Watch?
 
 Android already tracks data usage, but it is buried deep in Settings and there is no widget for it. Data Watch brings those numbers to the surface: how much you used today, which apps used it, on which Wi-Fi network, and which apps upload data while you are not using them.
@@ -129,6 +138,12 @@ From Android's own network statistics (the same source as Settings > Connections
 <summary><b>Why does it need Location?</b></summary>
 
 Android only reveals the Wi-Fi name (SSID) to apps with Location permission. It is optional; everything else works without it. Wi-Fi names stay on the device, can be deleted with **Clear Wi-Fi history**, and are wiped automatically when you turn Location permission off.
+</details>
+
+<details>
+<summary><b>Is my data backed up or shared?</b></summary>
+
+No. Data Watch has no internet permission, and its data (Wi-Fi history, widget settings, images) is excluded from Google cloud backup and device-to-device transfer. Uninstalling the app removes everything.
 </details>
 
 <details>
