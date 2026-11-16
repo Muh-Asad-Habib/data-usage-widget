@@ -132,12 +132,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             loading = false
         }
         WidgetUpdater.updateAll(ctx)
+        if (stack.last() == Screen.Dashboard) reloadDashboard(dashDay)
     }
 
     fun openDashboard() {
-        weeks.clear()
         open(Screen.Dashboard)
-        selectDay(LocalDate.now(Periods.zone))
+        reloadDashboard(LocalDate.now(Periods.zone))
+    }
+
+    // Drops every cached week so the current week is queried again instead of showing stale totals.
+    private fun reloadDashboard(day: LocalDate) {
+        weeks.clear()
+        dashJob?.cancel()
+        dashWeek = null
+        selectDay(day)
         viewModelScope.launch {
             totals = withContext(Dispatchers.IO) {
                 listOf(Period.LAST_7, Period.THIS_MONTH, Period.LAST_MONTH).map { it to repo.total(Periods.range(it)) }
