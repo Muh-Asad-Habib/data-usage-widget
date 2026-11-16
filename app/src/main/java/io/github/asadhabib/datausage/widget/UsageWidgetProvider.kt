@@ -26,7 +26,10 @@ open class UsageWidgetProvider : AppWidgetProvider() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action == WidgetRenderer.ACTION_REFRESH) {
             val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-            val ids = if (id == AppWidgetManager.INVALID_APPWIDGET_ID) WidgetUpdater.ids(ctx) else intArrayOf(id)
+            val owned = WidgetUpdater.ids(ctx)
+            // The receiver is exported; only act on widget IDs that belong to this app.
+            val ids = if (id == AppWidgetManager.INVALID_APPWIDGET_ID) owned else owned.filter { it == id }.toIntArray()
+            if (ids.isEmpty()) return
             val mgr = AppWidgetManager.getInstance(ctx)
             ids.forEach { mgr.partiallyUpdateAppWidget(it, WidgetRenderer.busy(ctx)) }
             val started = System.currentTimeMillis()

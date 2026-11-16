@@ -50,8 +50,11 @@ object WifiLog {
         return s.takeUnless { it.isBlank() || it == "<unknown ssid>" || it == "0x" }
     }
 
+    // The log is tab/newline separated; SSIDs are attacker-chosen, so strip control characters.
+    private fun clean(ssid: String) = ssid.filterNot { it.isISOControl() }.take(64).takeUnless { it.isBlank() }
+
     fun record(ctx: Context) {
-        val ssid = currentSsid(ctx) ?: return
+        val ssid = currentSsid(ctx)?.let(::clean) ?: return
         synchronized(this) {
             val p = sp(ctx)
             val log = p.getString(KEY, "") ?: ""
@@ -67,6 +70,10 @@ object WifiLog {
             val i = l.indexOf('\t')
             if (i <= 0) null else l.substring(0, i).toLongOrNull()?.let { it to l.substring(i + 1) }
         }
+
+    fun clear(ctx: Context) = synchronized(this) { sp(ctx).edit().clear().apply() }
+
+    fun isEmpty(ctx: Context) = sp(ctx).getString(KEY, "").isNullOrEmpty()
 
     fun since(ctx: Context): Long? = if (Demo.on(ctx)) Demo.since() else entries(ctx).firstOrNull()?.first
 

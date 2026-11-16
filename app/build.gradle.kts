@@ -20,8 +20,8 @@ android {
         applicationId = "io.github.asadhabib.datausage"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.2.3"
+        versionCode = 7
+        versionName = "1.2.4"
     }
 
     signingConfigs {
@@ -40,7 +40,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // No fallback to the debug key: without keystore.properties the release APK stays unsigned.
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

@@ -13,7 +13,7 @@
 ![No internet](https://img.shields.io/badge/permission-no%20internet-111827?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6B7280?style=flat-square)](LICENSE)
 
-<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.3/DataWatch-v1.2.3.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.3%20%C2%B7%201.4%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
+<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.4/DataWatch-v1.2.4.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.4%20%C2%B7%201.4%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
 
 </div>
 
@@ -92,6 +92,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 ### Light, fast and private
 - About 1.4 MB, no background services eating RAM
 - **No internet permission**: nothing ever leaves your phone
+- Excluded from cloud backup and device transfer; Wi-Fi history can be cleared anytime and is wiped if you revoke Location
 - Light and dark theme, follows the system language
 
 </td>
@@ -103,7 +104,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 ## Install
 
-1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.3/DataWatch-v1.2.3.apk) and open it (allow "Install unknown apps").
+1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.4/DataWatch-v1.2.4.apk) and open it (allow "Install unknown apps").
 2. Open **Data Watch** and grant **Usage access**.
 3. Optional: allow **Location** to show Wi-Fi names (Android needs it to read the SSID).
 4. Long-press your home screen, tap **Widgets** and add **Data Watch**.
@@ -127,7 +128,7 @@ From Android's own network statistics (the same source as Settings > Connections
 <details>
 <summary><b>Why does it need Location?</b></summary>
 
-Android only reveals the Wi-Fi name (SSID) to apps with Location permission. It is optional; everything else works without it.
+Android only reveals the Wi-Fi name (SSID) to apps with Location permission. It is optional; everything else works without it. Wi-Fi names stay on the device, can be deleted with **Clear Wi-Fi history**, and are wiped automatically when you turn Location permission off.
 </details>
 
 <details>
@@ -143,6 +144,8 @@ git clone https://github.com/Muh-Asad-Habib/data-usage-widget.git
 cd data-usage-widget
 ./gradlew assembleRelease
 ```
+
+Release builds are signed only when `keystore.properties` exists; otherwise the APK is left unsigned. Dependencies and the Gradle distribution are checksum-verified (`gradle/verification-metadata.xml`). After changing dependencies, run `./gradlew --write-verification-metadata sha256 assembleDebug assembleRelease`.
 
 Built with Kotlin, Jetpack Compose and RemoteViews.
 

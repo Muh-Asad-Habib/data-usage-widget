@@ -49,6 +49,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
@@ -341,6 +342,17 @@ internal fun SsidCard(vm: MainViewModel, list: List<io.github.asadhabib.datausag
                     Spacer(Modifier.height(4.dp))
                     Text(L.t("Recorded since ", "Tercatat sejak ") + Instant.ofEpochMilli(it).atZone(Periods.zone).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Periods.locale)),
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    var confirm by remember { mutableStateOf(false) }
+                    TextButton({ confirm = true }, contentPadding = PaddingValues(0.dp)) {
+                        Text(L.t("Clear Wi-Fi history", "Hapus riwayat Wi-Fi"), fontSize = 13.sp)
+                    }
+                    if (confirm) AlertDialog(
+                        onDismissRequest = { confirm = false },
+                        title = { Text(L.t("Clear Wi-Fi history?", "Hapus riwayat Wi-Fi?")) },
+                        text = { Text(L.t("All recorded Wi-Fi names will be deleted. Usage stays, but past Wi-Fi traffic will show as not recorded.", "Semua nama Wi-Fi yang tercatat akan dihapus. Data pemakaian tetap ada, tapi Wi-Fi sebelumnya tampil sebagai belum tercatat.")) },
+                        confirmButton = { TextButton({ confirm = false; WifiLog.clear(ctx); vm.refresh() }) { Text(L.t("Clear", "Hapus")) } },
+                        dismissButton = { TextButton({ confirm = false }) { Text(L.t("Cancel", "Batal")) } },
+                    )
                 }
             }
         }

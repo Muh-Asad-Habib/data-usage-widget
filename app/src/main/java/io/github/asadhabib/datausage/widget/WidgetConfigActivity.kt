@@ -87,6 +87,8 @@ import io.github.asadhabib.datausage.ui.Ico
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -131,7 +133,11 @@ private fun WidgetConfig.withStyle(s: Style): WidgetConfig = when (s) {
 private val blurNames get() = listOf(L.t("Off", "Mati"), L.t("Low", "Rendah"), L.t("Medium", "Sedang"), L.t("High", "Tinggi"))
 
 class WidgetConfigActivity : ComponentActivity() {
-    companion object { const val EXTRA_EDIT = "edit" }
+    companion object {
+        const val EXTRA_EDIT = "edit"
+        private const val MAX_IMAGE_BYTES = 40 * 1024 * 1024
+        private const val MAX_IMAGE_PIXELS = 100_000_000L
+    }
 
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
@@ -140,7 +146,11 @@ class WidgetConfigActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         setResult(RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
-        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID ||
+            AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId)?.provider?.packageName != packageName
+        ) { finish(); return }
+        // Externally launchable and commits config, so ignore taps through overlays.
+        window.decorView.filterTouchesWhenObscured = true
         val initial = WidgetPrefs.load(this, widgetId)
         setContent { AppTheme { ConfigScreen(initial) } }
     }
@@ -154,21 +164,45 @@ class WidgetConfigActivity : ComponentActivity() {
         finish()
     }
 
-    private fun saveImage(uri: Uri): Boolean = try {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-        var sample = 1
-        while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 1080) sample *= 2
-        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-        val raw = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }!!
-        val m = max(raw.width, raw.height)
-        val bmp = if (m > 1080) {
-            val s = 1080f / m
-            Bitmap.createScaledBitmap(raw, (raw.width * s).roundToInt(), (raw.height * s).roundToInt(), true).also { if (it !== raw) raw.recycle() }
-        } else raw
-        WidgetPrefs.imageFile(this, widgetId).outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it) }
-        true
-    } catch (_: Exception) { false }
+    private fun saveImage(uri: Uri): Boolean {
+        val dst = WidgetPrefs.imageFile(this, widgetId)
+        val tmp = File(dst.parentFile, dst.name + ".tmp")
+        return try {
+            // Read once so the provider can't serve different bytes to the bounds and full decode.
+            val bytes = contentResolver.openInputStream(uri)?.use { s ->
+                val out = ByteArrayOutputStream()
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = s.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                    check(out.size() <= MAX_IMAGE_BYTES)
+                }
+                out.toByteArray()
+            } ?: return false
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            check(bounds.outWidth > 0 && bounds.outHeight > 0)
+            check(bounds.outWidth.toLong() * bounds.outHeight <= MAX_IMAGE_PIXELS)
+            var sample = 1
+            while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 1080) sample *= 2
+            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+            val raw = checkNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts))
+            val m = max(raw.width, raw.height)
+            val bmp = if (m > 1080) {
+                val s = 1080f / m
+                Bitmap.createScaledBitmap(raw, (raw.width * s).roundToInt(), (raw.height * s).roundToInt(), true).also { if (it !== raw) raw.recycle() }
+            } else raw
+            tmp.outputStream().use { check(bmp.compress(Bitmap.CompressFormat.JPEG, 85, it)) }
+            bmp.recycle()
+            check(tmp.renameTo(dst))
+            true
+        } catch (_: Throwable) {
+            // Includes OutOfMemoryError from huge or malformed images.
+            tmp.delete()
+            false
+        }
+    }
 
     @Composable
     private fun ConfigScreen(initial: WidgetConfig) {

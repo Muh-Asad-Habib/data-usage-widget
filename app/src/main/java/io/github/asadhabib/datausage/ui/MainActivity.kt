@@ -115,6 +115,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         granted = UsageAccess.granted(ctx)
         location = WifiLog.hasLocation(ctx)
         locationOn = WifiLog.locationOn(ctx)
+        // Location revoked: drop the SSID history it was collected under.
+        if (!location && !WifiLog.isEmpty(ctx)) WifiLog.clear(ctx)
         if (!granted) return
         val r = Periods.range(Period.TODAY)
         range = r
