@@ -121,7 +121,7 @@ fun SpanScreen(vm: MainViewModel, s: Screen.Span) {
         item { HeroCard(s.title, sum, vm.spanNet, vm.spanLoading, null) }
         if (vm.spanLoading) return@Page
         item { Tiles(sum, vm.spanNet) }
-        if (vm.spanNet != Net.MOBILE) item { SsidCard(vm, vm.spanSsids) }
+        if (vm.spanNet != Net.MOBILE && vm.location && vm.spanSsids.any { it.ssid != null }) item { SsidCard(vm, vm.spanSsids) }
         item { NetSelector(vm.spanNet) { vm.spanNet = it } }
         appList(sum, vm.spanNet, showAll, { showAll = !showAll }) { vm.open(Screen.Detail(it, s.title)) }
         item { BackgroundWatch(sum) { vm.open(Screen.Detail(it, s.title)) } }

@@ -23,6 +23,9 @@ object WifiLog {
     private const val MAX = 3000
     private const val KEY = "log"
 
+    // Android keeps network stats for about 90 days, so older SSID records can't be matched to traffic anyway.
+    private const val RETENTION_MS = 90L * 24 * 60 * 60 * 1000
+
     private fun sp(ctx: Context) = ctx.getSharedPreferences("wifi_log", Context.MODE_PRIVATE)
 
     fun hasLocation(ctx: Context) = Demo.on(ctx) ||
@@ -54,15 +57,24 @@ object WifiLog {
     private fun clean(ssid: String) = ssid.filterNot { it.isISOControl() }.take(64).takeUnless { it.isBlank() }
 
     fun record(ctx: Context) {
-        val ssid = currentSsid(ctx)?.let(::clean) ?: return
+        val ssid = currentSsid(ctx)?.let(::clean)
         synchronized(this) {
             val p = sp(ctx)
             val log = p.getString(KEY, "") ?: ""
-            val last = log.substringAfterLast('\n').substringAfter('\t', "")
-            if (last == ssid) return
-            val lines = (log.lines().filter { it.isNotBlank() } + "${System.currentTimeMillis()}\t$ssid").takeLast(MAX)
-            p.edit().putString(KEY, lines.joinToString("\n")).apply()
+            var lines = prune(log.lines().filter { it.isNotBlank() })
+            val last = lines.lastOrNull()?.substringAfter('\t', "")
+            if (ssid != null && last != ssid) lines = (lines + "${System.currentTimeMillis()}\t$ssid").takeLast(MAX)
+            val out = lines.joinToString("\n")
+            if (out != log) p.edit().putString(KEY, out).apply()
         }
+    }
+
+    /** Drops records older than [RETENTION_MS], keeping the one still active at the cutoff. */
+    private fun prune(lines: List<String>): List<String> {
+        val cutoff = System.currentTimeMillis() - RETENTION_MS
+        val firstNew = lines.indexOfFirst { (it.substringBefore('\t').toLongOrNull() ?: 0) >= cutoff }
+        val keepFrom = if (firstNew < 0) lines.size - 1 else firstNew - 1
+        return if (keepFrom > 0) lines.drop(keepFrom) else lines
     }
 
     private fun entries(ctx: Context): List<Pair<Long, String>> =
@@ -70,8 +82,6 @@ object WifiLog {
             val i = l.indexOf('\t')
             if (i <= 0) null else l.substring(0, i).toLongOrNull()?.let { it to l.substring(i + 1) }
         }
-
-    fun clear(ctx: Context) = synchronized(this) { sp(ctx).edit().clear().apply() }
 
     fun isEmpty(ctx: Context) = sp(ctx).getString(KEY, "").isNullOrEmpty()
 

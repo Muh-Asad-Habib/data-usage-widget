@@ -49,7 +49,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
@@ -306,6 +305,7 @@ internal fun SsidCard(vm: MainViewModel, list: List<io.github.asadhabib.datausag
             }
         }
         Spacer(Modifier.height(12.dp))
+        val since = WifiLog.since(ctx)
         when {
             !vm.location -> {
                 Text(
@@ -325,8 +325,8 @@ internal fun SsidCard(vm: MainViewModel, list: List<io.github.asadhabib.datausag
                     bgLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 }
                 val max = list.maxOfOrNull { it.bytes }?.coerceAtLeast(1) ?: 1
-                if (list.isEmpty()) Text(L.t("No Wi-Fi records for this period yet.", "Belum ada catatan Wi-Fi di periode ini."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                list.take(8).forEach { u ->
+                if (list.none { it.ssid != null }) Text(L.t("No Wi-Fi records for this period yet.", "Belum ada catatan Wi-Fi di periode ini."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (list.any { it.ssid != null }) list.take(8).forEach { u ->
                     Column(Modifier.padding(vertical = 6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(u.ssid ?: L.t("Not recorded", "Belum tercatat"), Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -338,21 +338,11 @@ internal fun SsidCard(vm: MainViewModel, list: List<io.github.asadhabib.datausag
                         Bar(u.bytes.toFloat() / max, if (u.ssid != null) WifiColor else OtherColor, 4.dp)
                     }
                 }
-                WifiLog.since(ctx)?.let {
+                since?.let {
                     Spacer(Modifier.height(4.dp))
-                    Text(L.t("Recorded since ", "Tercatat sejak ") + Instant.ofEpochMilli(it).atZone(Periods.zone).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Periods.locale)),
+                    Text(L.t("Recorded since ", "Tercatat sejak ") + Instant.ofEpochMilli(it).atZone(Periods.zone).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Periods.locale)) +
+                        L.t(" · kept for 90 days", " · disimpan 90 hari"),
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    var confirm by remember { mutableStateOf(false) }
-                    TextButton({ confirm = true }, contentPadding = PaddingValues(0.dp)) {
-                        Text(L.t("Clear Wi-Fi history", "Hapus riwayat Wi-Fi"), fontSize = 13.sp)
-                    }
-                    if (confirm) AlertDialog(
-                        onDismissRequest = { confirm = false },
-                        title = { Text(L.t("Clear Wi-Fi history?", "Hapus riwayat Wi-Fi?")) },
-                        text = { Text(L.t("All recorded Wi-Fi names will be deleted. Usage stays, but past Wi-Fi traffic will show as not recorded.", "Semua nama Wi-Fi yang tercatat akan dihapus. Data pemakaian tetap ada, tapi Wi-Fi sebelumnya tampil sebagai belum tercatat.")) },
-                        confirmButton = { TextButton({ confirm = false; WifiLog.clear(ctx); vm.refresh() }) { Text(L.t("Clear", "Hapus")) } },
-                        dismissButton = { TextButton({ confirm = false }) { Text(L.t("Cancel", "Batal")) } },
-                    )
                 }
             }
         }

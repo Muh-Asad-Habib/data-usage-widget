@@ -115,8 +115,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         granted = UsageAccess.granted(ctx)
         location = WifiLog.hasLocation(ctx)
         locationOn = WifiLog.locationOn(ctx)
-        // Location revoked: drop the SSID history it was collected under.
-        if (!location && !WifiLog.isEmpty(ctx)) WifiLog.clear(ctx)
         if (!granted) return
         val r = Periods.range(Period.TODAY)
         range = r
@@ -125,7 +123,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val loc = location
         job = viewModelScope.launch {
             val (s, w) = withContext(Dispatchers.IO) {
-                if (loc) { WifiLog.watch(ctx); WifiLog.record(ctx) }
+                if (loc) WifiLog.watch(ctx)
+                // Also prunes old records, so it runs even without location access.
+                WifiLog.record(ctx)
                 repo.summary(r) to (if (loc) WifiLog.usage(ctx, repo, r) else emptyList())
             }
             summary = s

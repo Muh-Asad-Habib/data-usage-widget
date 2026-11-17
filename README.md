@@ -13,15 +13,20 @@
 ![No internet](https://img.shields.io/badge/permission-no%20internet-111827?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6B7280?style=flat-square)](LICENSE)
 
-<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.4/DataWatch-v1.2.4.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.4%20%C2%B7%201.4%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
+<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.5/DataWatch-v1.2.5.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.5%20%C2%B7%201.4%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
 
 </div>
 
 ---
 
-## What's new in v1.2.4
+## What's new in v1.2.5
 
-- **Clear Wi-Fi history** button; Wi-Fi names are wiped automatically if you revoke Location
+- Wi-Fi history is kept automatically for 90 days (same as Android's usage history), then older records are removed
+- Per-SSID usage for yesterday, weeks and custom dates shows only when Location is allowed and names were recorded
+- Turning Location off hides Wi-Fi names; history is kept and comes back when you allow it again
+
+### v1.2.4
+
 - App data is excluded from cloud backup and phone-to-phone transfer
 - Safer widget settings and custom image import (no crash on huge images)
 - Verified build: Gradle and dependency checksums are pinned
@@ -101,7 +106,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 ### Light, fast and private
 - About 1.4 MB, no background services eating RAM
 - **No internet permission**: nothing ever leaves your phone
-- Excluded from cloud backup and device transfer; Wi-Fi history can be cleared anytime and is wiped if you revoke Location
+- Excluded from cloud backup and device transfer; Wi-Fi history is kept for 90 days, then removed automatically
 - Light and dark theme, follows the system language
 
 </td>
@@ -113,7 +118,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 ## Install
 
-1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.4/DataWatch-v1.2.4.apk) and open it (allow "Install unknown apps").
+1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.5/DataWatch-v1.2.5.apk) and open it (allow "Install unknown apps").
 2. Open **Data Watch** and grant **Usage access**.
 3. Optional: allow **Location** to show Wi-Fi names (Android needs it to read the SSID).
 4. Long-press your home screen, tap **Widgets** and add **Data Watch**.
@@ -137,7 +142,7 @@ From Android's own network statistics (the same source as Settings > Connections
 <details>
 <summary><b>Why does it need Location?</b></summary>
 
-Android only reveals the Wi-Fi name (SSID) to apps with Location permission. It is optional; everything else works without it. Wi-Fi names stay on the device, can be deleted with **Clear Wi-Fi history**, and are wiped automatically when you turn Location permission off.
+Android only reveals the Wi-Fi name (SSID) to apps with Location permission. It is optional; everything else works without it. Wi-Fi names stay on the device and are removed automatically after 90 days. If you turn Location off, Wi-Fi names are hidden (history is kept and shown again when you allow it).
 </details>
 
 <details>
