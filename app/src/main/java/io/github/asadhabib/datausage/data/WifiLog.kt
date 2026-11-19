@@ -1,15 +1,19 @@
 package io.github.asadhabib.datausage.data
 
 import android.Manifest
-import android.app.PendingIntent
+import android.app.job.JobInfo
+import android.app.job.JobParameters
+import android.app.job.JobScheduler
+import android.app.job.JobService
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.os.Build
 
@@ -42,30 +46,53 @@ object WifiLog {
         else lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) || lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
     }
 
+    /** Marks a Wi-Fi connection whose name Android hid (app in background without "All the time" location). */
+    const val UNKNOWN = ""
+
+    @Suppress("DEPRECATION")
+    private fun wifiNetwork(ctx: Context): Network? {
+        val cm = ctx.getSystemService(ConnectivityManager::class.java)
+        fun wifi(n: Network?) = n != null && cm.getNetworkCapabilities(n)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        return cm.activeNetwork.takeIf(::wifi) ?: cm.allNetworks.firstOrNull(::wifi)
+    }
+
     @Suppress("DEPRECATION")
     fun currentSsid(ctx: Context): String? {
-        val cm = ctx.getSystemService(ConnectivityManager::class.java)
-        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
-        if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) return null
-        if (!hasLocation(ctx)) return null
+        if (!hasLocation(ctx) || wifiNetwork(ctx) == null) return null
         val raw = ctx.applicationContext.getSystemService(WifiManager::class.java)?.connectionInfo?.ssid ?: return null
         val s = raw.removeSurrounding("\"")
-        return s.takeUnless { it.isBlank() || it == "<unknown ssid>" || it == "0x" }
+        return s.takeUnless { it.isBlank() || it == "<unknown ssid>" || it == "0x" }?.let(::clean)
     }
 
     // The log is tab/newline separated; SSIDs are attacker-chosen, so strip control characters.
     private fun clean(ssid: String) = ssid.filterNot { it.isISOControl() }.take(64).takeUnless { it.isBlank() }
 
-    fun record(ctx: Context) {
-        val ssid = currentSsid(ctx)?.let(::clean)
+    /**
+     * Log line: "<millis>\t<ssid>\t<network id>". The network id lets a later foreground read
+     * name a connection that was only logged as [UNKNOWN] while the app was in the background.
+     */
+    fun record(ctx: Context, network: Network? = null) {
+        val net = if (hasLocation(ctx)) network ?: wifiNetwork(ctx) else null
+        val ssid = if (net != null) currentSsid(ctx) else null
+        val id = net?.toString().orEmpty()
         synchronized(this) {
             val p = sp(ctx)
             val log = p.getString(KEY, "") ?: ""
-            var lines = prune(log.lines().filter { it.isNotBlank() })
-            val last = lines.lastOrNull()?.substringAfter('\t', "")
-            if (ssid != null && last != ssid) lines = (lines + "${System.currentTimeMillis()}\t$ssid").takeLast(MAX)
-            val out = lines.joinToString("\n")
-            if (out != log) p.edit().putString(KEY, out).apply()
+            val lines = prune(log.lines().filter { it.isNotBlank() }).toMutableList()
+            if (net != null) {
+                val last = lines.lastOrNull()?.split('\t')
+                val lastSsid = last?.getOrNull(1)
+                val lastId = last?.getOrNull(2).orEmpty()
+                val now = System.currentTimeMillis()
+                when {
+                    ssid != null && lastSsid == UNKNOWN && lastId == id -> lines[lines.lastIndex] = "${last[0]}\t$ssid\t$id"
+                    ssid != null && lastSsid == ssid -> if (lastId != id) lines[lines.lastIndex] = "${last[0]}\t$ssid\t$id"
+                    ssid != null -> lines += "$now\t$ssid\t$id"
+                    lastId != id -> lines += "$now\t$UNKNOWN\t$id"
+                }
+            }
+            val out = lines.takeLast(MAX).joinToString("\n")
+            if (out != log) p.edit().putString(KEY, out).commit()
         }
     }
 
@@ -80,7 +107,7 @@ object WifiLog {
     private fun entries(ctx: Context): List<Pair<Long, String>> =
         (sp(ctx).getString(KEY, "") ?: "").lines().mapNotNull { l ->
             val i = l.indexOf('\t')
-            if (i <= 0) null else l.substring(0, i).toLongOrNull()?.let { it to l.substring(i + 1) }
+            if (i <= 0) null else l.substring(0, i).toLongOrNull()?.let { it to l.substring(i + 1).substringBefore('\t') }
         }
 
     fun isEmpty(ctx: Context) = sp(ctx).getString(KEY, "").isNullOrEmpty()
@@ -108,27 +135,40 @@ object WifiLog {
         return map.map { SsidUsage(it.key, it.value) }.sortedByDescending { it.bytes }
     }
 
-    /** Wakes [Receiver] whenever a Wi-Fi network connects, even if the app is not running. */
+    private const val JOB_ID = 7301
+    private const val JOB_PERIOD_MS = 15L * 60 * 1000
+
+    /**
+     * Checks the Wi-Fi network every 15 minutes, even if the app is not running. A PendingIntent
+     * network callback can't be used: Android fires it at once for the current network and then
+     * drops the registration, so later connections would never be seen.
+     */
     fun watch(ctx: Context) {
-        val cm = ctx.getSystemService(ConnectivityManager::class.java)
-        val req = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build()
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-            (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
-        val pi = PendingIntent.getBroadcast(ctx, 7, Intent(ctx, Receiver::class.java), flags)
-        try { cm.registerNetworkCallback(req, pi) } catch (_: Exception) {}
+        val js = ctx.getSystemService(JobScheduler::class.java) ?: return
+        if (js.getPendingJob(JOB_ID) != null) return
+        val job = JobInfo.Builder(JOB_ID, ComponentName(ctx, Job::class.java))
+            .setPeriodic(JOB_PERIOD_MS)
+            .setPersisted(true)
+            .build()
+        try { js.schedule(job) } catch (_: Exception) {}
+    }
+
+    class Job : JobService() {
+        override fun onStartJob(params: JobParameters): Boolean {
+            Thread {
+                try { record(applicationContext) } finally { jobFinished(params, false) }
+            }.start()
+            return true
+        }
+
+        override fun onStopJob(params: JobParameters) = true
     }
 
     class Receiver : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
-            if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) watch(ctx)
-            val pending = goAsync()
-            Thread {
-                try {
-                    // The SSID may not be readable right when the network appears.
-                    repeat(3) { if (currentSsid(ctx) == null) Thread.sleep(1500) }
-                    record(ctx)
-                } finally { pending.finish() }
-            }.start()
+            if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+                if (hasLocation(ctx)) watch(ctx)
+            }
         }
     }
 }

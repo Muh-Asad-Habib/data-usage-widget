@@ -13,13 +13,18 @@
 ![No internet](https://img.shields.io/badge/permission-no%20internet-111827?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6B7280?style=flat-square)](LICENSE)
 
-<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.5/DataWatch-v1.2.5.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.5%20%C2%B7%201.4%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
+<a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.6/DataWatch-v1.2.6.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.6%20%C2%B7%201.4%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
 
 </div>
 
 ---
 
-## What's new in v1.2.5
+## What's new in v1.2.6
+
+- Fixed: switching between several Wi-Fi networks while the app was closed was recorded as only one SSID. Wi-Fi is now checked every 15 minutes in the background
+- Connections whose name Android hid are listed as "Unknown Wi-Fi" instead of being added to the previous SSID; allow Location "All the time" to record names while the app is closed
+
+### v1.2.5
 
 - Wi-Fi history is kept automatically for 90 days (same as Android's usage history), then older records are removed
 - Per-SSID usage for yesterday, weeks and custom dates shows only when Location is allowed and names were recorded
@@ -118,7 +123,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 ## Install
 
-1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.5/DataWatch-v1.2.5.apk) and open it (allow "Install unknown apps").
+1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.6/DataWatch-v1.2.6.apk) and open it (allow "Install unknown apps").
 2. Open **Data Watch** and grant **Usage access**.
 3. Optional: allow **Location** to show Wi-Fi names (Android needs it to read the SSID).
 4. Long-press your home screen, tap **Widgets** and add **Data Watch**.
@@ -142,7 +147,7 @@ From Android's own network statistics (the same source as Settings > Connections
 <details>
 <summary><b>Why does it need Location?</b></summary>
 
-Android only reveals the Wi-Fi name (SSID) to apps with Location permission. It is optional; everything else works without it. Wi-Fi names stay on the device and are removed automatically after 90 days. If you turn Location off, Wi-Fi names are hidden (history is kept and shown again when you allow it).
+Android only reveals the Wi-Fi name (SSID) to apps with Location permission. It is optional; everything else works without it. Android hides the Wi-Fi name from closed apps unless Location is set to "All the time", so allow that for complete records (the app checks Wi-Fi every 15 minutes). Wi-Fi names stay on the device and are removed automatically after 90 days. If you turn Location off, Wi-Fi names are hidden (history is kept and shown again when you allow it).
 </details>
 
 <details>

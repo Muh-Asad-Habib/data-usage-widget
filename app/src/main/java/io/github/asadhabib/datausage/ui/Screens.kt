@@ -327,15 +327,20 @@ internal fun SsidCard(vm: MainViewModel, list: List<io.github.asadhabib.datausag
                 val max = list.maxOfOrNull { it.bytes }?.coerceAtLeast(1) ?: 1
                 if (list.none { it.ssid != null }) Text(L.t("No Wi-Fi records for this period yet.", "Belum ada catatan Wi-Fi di periode ini."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (list.any { it.ssid != null }) list.take(8).forEach { u ->
+                    val named = !u.ssid.isNullOrEmpty()
                     Column(Modifier.padding(vertical = 6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(u.ssid ?: L.t("Not recorded", "Belum tercatat"), Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                fontWeight = if (u.ssid != null) FontWeight.Medium else FontWeight.Normal,
-                                color = if (u.ssid != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(when (u.ssid) {
+                                null -> L.t("Not recorded", "Belum tercatat")
+                                WifiLog.UNKNOWN -> L.t("Unknown Wi-Fi (app was closed)", "Wi-Fi tanpa nama (aplikasi tertutup)")
+                                else -> u.ssid
+                            }, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (named) FontWeight.Medium else FontWeight.Normal,
+                                color = if (named) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(Fmt.bytes(u.bytes), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         }
                         Spacer(Modifier.height(6.dp))
-                        Bar(u.bytes.toFloat() / max, if (u.ssid != null) WifiColor else OtherColor, 4.dp)
+                        Bar(u.bytes.toFloat() / max, if (named) WifiColor else OtherColor, 4.dp)
                     }
                 }
                 since?.let {

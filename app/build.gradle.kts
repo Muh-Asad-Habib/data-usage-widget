@@ -20,8 +20,8 @@ android {
         applicationId = "io.github.asadhabib.datausage"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.2.5"
+        versionCode = 9
+        versionName = "1.2.6"
     }
 
     signingConfigs {
