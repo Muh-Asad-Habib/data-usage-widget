@@ -159,7 +159,7 @@ No. Data Watch has no internet permission, and its data (Wi-Fi history, widget s
 <details>
 <summary><b>Does it drain the battery?</b></summary>
 
-No. There is no always-running service. Widgets refresh on a schedule and when you tap refresh.
+No. There is no always-running service. Widgets refresh on a schedule and when you tap refresh. With Location allowed, the app checks the Wi-Fi name every 15 minutes: it takes a few milliseconds, uses no GPS or internet, and Android batches or delays it when the phone is idle or in battery saver.
 </details>
 
 ## Build from source
