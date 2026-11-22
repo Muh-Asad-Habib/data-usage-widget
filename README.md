@@ -30,12 +30,6 @@
 - Per-SSID usage for yesterday, weeks and custom dates shows only when Location is allowed and names were recorded
 - Turning Location off hides Wi-Fi names; history is kept and comes back when you allow it again
 
-### v1.2.4
-
-- App data is excluded from cloud backup and phone-to-phone transfer
-- Safer widget settings and custom image import (no crash on huge images)
-- Verified build: Gradle and dependency checksums are pinned
-
 [Full changelog](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
 
 ## Why Data Watch?
