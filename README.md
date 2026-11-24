@@ -6,12 +6,12 @@
 
 **See where every megabyte goes.** Wi-Fi and mobile data usage per app and per Wi-Fi network, right on your home screen.
 
-[![Release](https://img.shields.io/badge/release-v1.2.6-2F6BFF?style=flat-square)](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Muh-Asad-Habib/data-usage-widget/total?style=flat-square&color=2F6BFF&cacheSeconds=3600)](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
+[![Release](https://img.shields.io/badge/Release-v1.2.6-2F6BFF?style=flat-square)](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Muh-Asad-Habib/data-usage-widget/total?style=flat-square&color=2F6BFF&label=Downloads&cacheSeconds=3600)](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
 ![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-34A853?style=flat-square&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
-![No internet](https://img.shields.io/badge/permission-no%20internet-111827?style=flat-square)
-[![License: MIT](https://img.shields.io/badge/license-MIT-6B7280?style=flat-square)](LICENSE)
+![No internet](https://img.shields.io/badge/Permission-No%20internet-111827?style=flat-square)
+[![License: MIT](https://img.shields.io/badge/License-MIT-6B7280?style=flat-square)](LICENSE)
 
 <a href="https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.6/DataWatch-v1.2.6.apk"><img src="https://img.shields.io/badge/Download%20APK-v1.2.6%20%C2%B7%201.4%20MB-3478F6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" height="44"></a>
 
