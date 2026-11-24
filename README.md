@@ -6,7 +6,7 @@
 
 **See where every megabyte goes.** Wi-Fi and mobile data usage per app and per Wi-Fi network, right on your home screen.
 
-[![Release](https://img.shields.io/github/v/release/Muh-Asad-Habib/data-usage-widget?style=flat-square&color=2F6BFF&label=release&cacheSeconds=3600)](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/latest)
+[![Release](https://img.shields.io/github/v/tag/Muh-Asad-Habib/data-usage-widget?sort=semver&style=flat-square&color=2F6BFF&label=release&cacheSeconds=3600)](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Muh-Asad-Habib/data-usage-widget/total?style=flat-square&color=2F6BFF&cacheSeconds=3600)](https://github.com/Muh-Asad-Habib/data-usage-widget/releases)
 ![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-34A853?style=flat-square&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
