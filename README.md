@@ -21,8 +21,8 @@
 
 ## What's new in v1.2.6
 
-- Fixed: switching between several Wi-Fi networks while the app was closed was recorded as only one SSID. Wi-Fi is now checked every 15 minutes in the background
-- Connections whose name Android hid are listed as "Unknown Wi-Fi" instead of being added to the previous SSID; allow Location "All the time" to record names while the app is closed
+- **Fixed:** connecting to several Wi-Fi networks while the app was closed was recorded as a single SSID. Wi-Fi is now checked every 15 minutes in the background
+- If Android hides a network's name, it is listed as **Unknown Wi-Fi** instead of being counted under the previous SSID. Allow Location **All the time** to record names while the app is closed
 
 ### v1.2.5
 
@@ -63,7 +63,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 <div align="center">
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/home-dark.png"><img src="docs/framed/home.png" width="200" alt="home"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/apps-dark.png"><img src="docs/framed/apps.png" width="200" alt="apps"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/dashboard-dark.png"><img src="docs/framed/dashboard.png" width="200" alt="dashboard"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/widget-settings-dark.png"><img src="docs/framed/widget-settings.png" width="200" alt="widget-settings"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/home-dark.png"><img src="docs/framed/home.png" width="200" alt="Home screen with today's usage"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/apps-dark.png"><img src="docs/framed/apps.png" width="200" alt="Per-app usage list"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/dashboard-dark.png"><img src="docs/framed/dashboard.png" width="200" alt="Dashboard with weekly charts"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/widget-settings-dark.png"><img src="docs/framed/widget-settings.png" width="200" alt="Widget settings with live preview"></picture>
 
 <sub>Screenshots follow your GitHub theme: switch to dark mode to see the dark theme.</sub>
 
@@ -89,7 +89,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 </td>
 <td width="45%" align="center">
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/dashboard-dark.png"><img src="docs/framed/dashboard.png" width="260" alt="dashboard"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/dashboard-dark.png"><img src="docs/framed/dashboard.png" width="260" alt="Dashboard with weekly charts"></picture>
 </td>
 </tr>
 <tr>
@@ -110,7 +110,7 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 </td>
 <td width="45%" align="center">
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/widget-settings-dark.png"><img src="docs/framed/widget-settings.png" width="260" alt="widget-settings"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/framed/widget-settings-dark.png"><img src="docs/framed/widget-settings.png" width="260" alt="Widget settings with live preview"></picture>
 </td>
 </tr>
 </table>
@@ -119,10 +119,22 @@ Apps that send data in the background are highlighted, a useful hint when checki
 
 1. [Download the APK](https://github.com/Muh-Asad-Habib/data-usage-widget/releases/download/v1.2.6/DataWatch-v1.2.6.apk) and open it (allow "Install unknown apps").
 2. Open **Data Watch** and grant **Usage access**.
-3. Optional: allow **Location** to show Wi-Fi names (Android needs it to read the SSID).
+3. Optional: allow **Location** to show Wi-Fi names (Android needs it to read the SSID). Choose **All the time** so names are also recorded while the app is closed.
 4. Long-press your home screen, tap **Widgets** and add **Data Watch**.
 
 **Requirements:** Android 8.0 or newer (minSdk 26).
+
+### Permissions
+
+| Permission | Why | Required |
+|---|---|---|
+| Usage access | Read Android's data usage statistics | Yes |
+| Query all packages | Show app names and icons in the usage list | Yes |
+| Location (+ All the time) | Read the Wi-Fi name (SSID); no GPS tracking | No |
+| Network and Wi-Fi state | Know whether you are on Wi-Fi or mobile data | Yes |
+| Run at startup | Resume the Wi-Fi check after a reboot | Yes |
+
+There is **no internet permission**, so the app cannot send anything off your phone.
 
 ## FAQ
 
@@ -157,6 +169,8 @@ No. There is no always-running service. Widgets refresh on a schedule and when y
 </details>
 
 ## Build from source
+
+Requires JDK 17 and the Android SDK (compileSdk 36). On Windows, use `gradlew.bat`.
 
 ```bash
 git clone https://github.com/Muh-Asad-Habib/data-usage-widget.git
